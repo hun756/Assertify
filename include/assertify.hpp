@@ -51,6 +51,9 @@ void __Assert(const char *expr_str, bool expr, const char *file, int line,
     }
 }
 
+#define ASSERT_ABORT(expr, msg) \
+    __Assert(#expr, (expr), __FILE__, __LINE__, (msg))
+
 #ifndef __CPP_AsertionError_Class
 
 #include <exception>
@@ -149,20 +152,20 @@ namespace
  * handle the assertion failure.
  *
  * @warning
- *  Using longjmp to handle an assertion failure can be an effective solution in some 
+ *  Using longjmp to handle an assertion failure can be an effective solution in some
  *  cases, but it is important to consider the potential drawbacks as well.
- * 
- *  One potential drawback of using longjmp is that it can make it difficult to understand 
- *  the flow of control in a program, especially if the longjmp call is buried deep in a 
+ *
+ *  One potential drawback of using longjmp is that it can make it difficult to understand
+ *  the flow of control in a program, especially if the longjmp call is buried deep in a
  *  nested function call. This can make the program harder to debug and maintain.
- * 
- *  Another potential drawback is that longjmp can bypass normal function return and resource 
- *  deallocation, which can lead to resource leaks and other unintended side effects. 
- *  This can be particularly problematic if the longjmp call occurs in a function that 
- *  allocates resources that are not cleaned up automatically (e.g., memory allocated with new, 
+ *
+ *  Another potential drawback is that longjmp can bypass normal function return and resource
+ *  deallocation, which can lead to resource leaks and other unintended side effects.
+ *  This can be particularly problematic if the longjmp call occurs in a function that
+ *  allocates resources that are not cleaned up automatically (e.g., memory allocated with new,
  *  file handles, etc.).
- * 
- *  Finally, longjmp is not exception-safe, which means that it can leave the program in an undefined 
+ *
+ *  Finally, longjmp is not exception-safe, which means that it can leave the program in an undefined
  *  state if an exception is thrown between the setjmp and longjmp calls.
  */
 void __Assert_Long_Jmp(const char *expr_str, bool expr, const char *file, int line,
