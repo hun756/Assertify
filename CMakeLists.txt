@@ -63,7 +63,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)  # Shared libraries
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)  # Executables
 
 # C++ standard configuration
-set(CMAKE_CXX_STANDARD 20)                # Use C++20
+set(CMAKE_CXX_STANDARD 23)                # Use C++23
 set(CMAKE_CXX_STANDARD_REQUIRED ON)       # Require C++20 support
 set(CMAKE_CXX_EXTENSIONS OFF)             # Disable compiler extensions
 

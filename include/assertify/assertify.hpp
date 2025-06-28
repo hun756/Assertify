@@ -1,101 +1,69 @@
-#ifndef MYPROJECT_MODULEA_H_fi84aj
-#define MYPROJECT_MODULEA_H_fi84aj
+#ifndef LIB_ASSERTIFY_HPP_p06vza
+#define LIB_ASSERTIFY_HPP_p06vza
 
-#include <string>
+#include <chrono>
+#include <source_location>
+#include <stacktrace>
+#include <stdexcept>
 
-/**
- * @file ModuleA.h
- * @brief Module containing string processing utilities.
- * @ingroup myproject
- * @author GitHub Copilot
- * @date Generated on: @date
- *
- * @details This file contains the StringProcessor class which provides
- * various string manipulation utilities for the myproject namespace.
- */
-
-namespace myproject
+namespace assertify
 {
-
-/**
- * @class StringProcessor
- * @brief Utility class for string manipulation operations.
- *
- * @details This class provides various methods to manipulate strings
- * including reversing, converting to uppercase, and removing spaces.
- * All methods are designed to be non-destructive, returning new string
- * instances rather than modifying the input.
- *
- * @note All methods are thread-safe as they don't modify internal state.
- *
- * @see std::string
- *
- * @code
- * myproject::StringProcessor processor;
- * std::string original = "Hello World";
- * std::string reversed = processor.reverse(original);  // "dlroW olleH"
- * std::string uppercase = processor.toUpper(original); // "HELLO WORLD"
- * std::string noSpaces = processor.removeSpaces(original); // "HelloWorld"
- * @endcode 
- */
-
-class StringProcessor
+class assertion_error final : public std::logic_error
 {
+private:
+    std::source_location location_;
+    std::stacktrace trace_;
+    std::string context_;
+    std::chrono::time_point<std::chrono::high_resolution_clock> timestamp_;
+
 public:
-    /**
-     * @brief Reverses the characters of a string
-     *
-     * This function takes a string as input and returns a new string with the
-     * characters in reverse order. For example, "hello" becomes "olleh".
-     *
-     * @code
-     * StringProcessor processor;
-     *
-     * // Basic reversal
-     * std::string normal = "hello";
-     * std::string reversed = processor.reverse(normal); // reversed = "olleh"
-     *
-     * // Palindrome check
-     * std::string word = "radar";
-     * bool isPalindrome = (word == processor.reverse(word)); // true
-     *
-     * // Multi-word phrases
-     * std::string phrase = "Time flies";
-     * std::string backwards = processor.reverse(phrase); // "seilf emiT"
-     * @endcode
-     * @param input The string to be reversed
-     * @return A new string containing the characters of the input in reverse
-     * order
-     */
-    std::string reverse(const std::string& input);
+    explicit assertion_error(
+        std::string_view message,
+        std::source_location location = std::source_location::current(),
+        std::string_view context = "")
+        : std::logic_error(std::string(message)), location_(location),
+          trace_(std::stacktrace::current()), context_(context),
+          timestamp_(std::chrono::high_resolution_clock::now())
+    {
+    }
 
-    /**
-     * @brief Converts a string to uppercase
-     *
-     * Takes an input string and returns a new string with all characters
-     * converted to their uppercase equivalents. The original string
-     * remains unchanged.
-     *
-     * @param input The string to be converted to uppercase
-     * @return A new string with all characters in uppercase
-     *
-     * @note This function only affects ASCII characters; non-ASCII characters
-     * may not be properly converted depending on the locale
-     */
-    std::string toUpper(const std::string& input);
+    template <typename... Args>
+    explicit assertion_error(std::source_location location,
+                             std::string_view context, Args&&... args)
+        : std::logic_error(std::format(std::forward<Args>(args)...)),
+          location_(location), trace_(std::stacktrace::current()),
+          context_(context),
+          timestamp_(std::chrono::high_resolution_clock::now())
+    {
+    }
 
-    /**
-     * @brief Removes all whitespace characters from a string.
-     *
-     * This function takes a string and returns a new string with all spaces
-     * removed. For example, "hello world" becomes "helloworld".
-     *
-     * @param input The string from which to remove spaces
-     * @return A new string with all spaces removed
-     */
-    std::string removeSpaces(const std::string& input);
+    [[nodiscard]] const std::source_location& where() const noexcept
+    {
+        return location_;
+    }
+
+    [[nodiscard]] const std::stacktrace& stack_trace() const noexcept
+    {
+        return trace_;
+    }
+
+    [[nodiscard]] const std::string& context() const noexcept
+    {
+        return context_;
+    }
+    
+    [[nodiscard]] const auto& timestamp() const noexcept { return timestamp_; }
+
+    [[nodiscard]] std::string detailed_message() const
+    {
+        return std::format(
+            "{}\nContext: {}\nLocation: {}:{}\nTimestamp: {}", what(), context_,
+            location_.file_name(), location_.line(),
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                timestamp_.time_since_epoch())
+                .count());
+    }
 };
+} // namespace assertify
 
-} // namespace myproject
-
-#endif // MYPROJECT_MODULEA_H_fi84aj
+#endif // end of include guard: LIB_ASSERTIFY_HPP_p06vza
