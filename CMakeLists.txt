@@ -39,7 +39,7 @@ set(PROJECT_VERSION_PATCH 0)    # Patch version for bug fixes
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 
 # Define the project with metadata
-project(cpp_project_template 
+project(assertify 
     VERSION ${PROJECT_VERSION}
     DESCRIPTION "Modern C++ Project Template"
     HOMEPAGE_URL "https://github.com/hun756/CPP-Starter-Template"
@@ -51,7 +51,7 @@ project(cpp_project_template
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(BUILD_EXAMPLES "Build example programs" ON)
 option(BUILD_TESTS "Build tests" ON)
-option(BUILD_BENCHMARKS "Build benchmark programs" OFF)
+option(BUILD_BENCHMARKS "Build benchmark programs" ON)
 option(ENABLE_COVERAGE "Enable coverage reporting" OFF)
 option(ENABLE_SANITIZERS "Enable sanitizers in debug builds" OFF)
 option(ENABLE_PCH "Enable precompiled headers" OFF)

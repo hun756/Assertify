@@ -1,13 +1,9 @@
-#include "myproject/ModuleA.h"
 #include <iostream>
 
 int main()
 {
-    myproject::StringProcessor sp;
-    std::string text = "Hello Example 1";
-
-    std::cout << "Original: " << text << std::endl;
-    std::cout << "Reversed: " << sp.reverse(text) << std::endl;
+    std::cout << "Hello from the updated assertify library!" << std::endl;
+    std::cout << "Library examples will come here soon!" << std::endl;
 
     return 0;
 }
