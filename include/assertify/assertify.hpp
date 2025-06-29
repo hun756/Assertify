@@ -8,6 +8,7 @@
 
 namespace assertify
 {
+
 class assertion_error final : public std::logic_error
 {
 private:
@@ -51,7 +52,7 @@ public:
     {
         return context_;
     }
-    
+
     [[nodiscard]] const auto& timestamp() const noexcept { return timestamp_; }
 
     [[nodiscard]] std::string detailed_message() const
@@ -64,6 +65,34 @@ public:
                 .count());
     }
 };
+
+namespace detail
+{
+template <typename T>
+class thread_safe_counter
+{
+    mutable std::atomic<T> value_{0};
+
+public:
+    void increment() noexcept
+    {
+        value_.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    void add(T val) noexcept
+    {
+        value_.fetch_add(val, std::memory_order_relaxed);
+    }
+
+    [[nodiscard]] T get() const noexcept
+    {
+        return value_.load(std::memory_order_relaxed);
+    }
+    
+    void reset() noexcept { value_.store(0, std::memory_order_relaxed); }
+};
+} // namespace detail
+
 } // namespace assertify
 
 #endif // end of include guard: LIB_ASSERTIFY_HPP_p06vza
