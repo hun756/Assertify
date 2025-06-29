@@ -2,12 +2,14 @@
 #define LIB_ASSERTIFY_HPP_p06vza
 
 #include <chrono>
+#include <coroutine>
 #include <memory_resource>
 #include <shared_mutex>
 #include <source_location>
 #include <stacktrace>
 #include <stdexcept>
 #include <unordered_map>
+#include <variant>
 
 namespace assertify
 {
@@ -191,6 +193,134 @@ public:
 };
 
 thread_local basic_memory_pool tl_pool;
+
+template <typename T>
+using fast_allocator = std::pmr::polymorphic_allocator<T>;
+
+template <typename T>
+using fast_string =
+    std::basic_string<char, std::char_traits<char>, fast_allocator<char>>;
+
+template <typename T>
+using fast_vector = std::pmr::vector<T>;
+
+template <typename T>
+using fast_unordered_map = std::pmr::unordered_map<T, T>;
+
+template <typename T>
+concept numeric_type = std::integral<T> || std::floating_point<T>;
+
+template <typename T>
+concept complex_numeric = requires(T t) {
+    { t.real() } -> std::floating_point;
+    { t.imag() } -> std::floating_point;
+};
+
+template <typename T>
+concept container_type =
+    std::ranges::range<T> && !std::convertible_to<T, std::string_view>;
+
+template <typename T>
+concept associative_container = requires(T t) {
+    typename T::key_type;
+    typename T::mapped_type;
+    t.find(typename T::key_type{});
+};
+
+template <typename T>
+concept sequence_container = container_type<T> && !associative_container<T>;
+
+template <typename T>
+concept string_like = std::convertible_to<T, std::string_view> ||
+                      std::convertible_to<T, std::string>;
+
+template <typename T>
+concept pointer_like =
+    std::is_pointer_v<std::remove_reference_t<T>> || requires(T&& t) {
+        *std::forward<T>(t);
+        { static_cast<bool>(std::forward<T>(t)) } -> std::convertible_to<bool>;
+    };
+
+template <typename T>
+concept optional_like = requires(T t) {
+    { t.has_value() } -> std::convertible_to<bool>;
+    { *t } -> std::convertible_to<typename T::value_type>;
+};
+
+template <typename T>
+concept variant_like = requires(T t) {
+    { t.index() } -> std::convertible_to<std::size_t>;
+    std::visit([](auto&&) {}, t);
+};
+
+template <typename T>
+concept callable_type = std::invocable<T>;
+
+template <typename T>
+concept boolean_convertible = std::convertible_to<T, bool>;
+
+template <typename T>
+concept streamable = requires(std::ostream& os, const T& t) { os << t; };
+
+template <typename T>
+concept hashable = requires(T t) { std::hash<T>{}(t); };
+
+template <typename T>
+concept comparable = requires(T a, T b) {
+    { a <=> b } -> std::convertible_to<std::partial_ordering>;
+};
+
+template <typename T>
+concept equality_comparable = std::equality_comparable<T>;
+
+template <typename T>
+concept regular_type = std::regular<T>;
+
+template <typename T, typename U>
+concept comparable_with = requires(const T& t, const U& u) {
+    { t == u } -> std::convertible_to<bool>;
+    { t != u } -> std::convertible_to<bool>;
+    { t < u } -> std::convertible_to<bool>;
+    { t <= u } -> std::convertible_to<bool>;
+    { t > u } -> std::convertible_to<bool>;
+    { t >= u } -> std::convertible_to<bool>;
+};
+
+template <typename T>
+concept serializable = requires(T t) {
+    { t.serialize() } -> std::convertible_to<std::string>;
+} || requires(T t, std::ostream& os) {
+    { os << t } -> std::convertible_to<std::ostream&>;
+};
+
+template <typename T>
+concept deserializable = requires(T t, const std::string& s) {
+    { T::deserialize(s) } -> std::convertible_to<T>;
+} || requires(T t, std::istream& is) {
+    { is >> t } -> std::convertible_to<std::istream&>;
+};
+
+template <typename T>
+concept network_testable = requires(T t) {
+    { t.get_status_code() } -> std::convertible_to<int>;
+    { t.get_headers() } -> container_type;
+    { t.get_body() } -> string_like;
+};
+
+template <typename T>
+concept coroutine_like = requires(T t) {
+    { t.await_ready() } -> std::convertible_to<bool>;
+    t.await_suspend(std::coroutine_handle<>{});
+    t.await_resume();
+};
+
+struct epsilon_config
+{
+    double relative_epsilon = 1e-9;
+    double absolute_epsilon = 1e-12;
+    bool use_ulp_comparison = false;
+    int max_ulp_difference = 4;
+};
 
 } // namespace detail
 
