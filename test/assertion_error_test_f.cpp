@@ -111,3 +111,62 @@ TEST_F(AssertionErrorTest, TemplateConstructorWithComplexFormatting)
     EXPECT_TRUE(error_message.find("actual=3.14") != std::string::npos);
     EXPECT_TRUE(error_message.find("tolerance=1.00e-03") != std::string::npos);
 }
+
+TEST_F(AssertionErrorTest, InheritsFromLogicError)
+{
+    const assertion_error error("test");
+    EXPECT_TRUE((std::is_base_of_v<std::logic_error, assertion_error>));
+
+    const std::logic_error& base_ref = error;
+    EXPECT_STREQ(base_ref.what(), "test");
+}
+
+TEST_F(AssertionErrorTest, CanBeCaughtAsStdException)
+{
+    bool caught_as_exception = false;
+    bool caught_as_logic_error = false;
+    bool caught_as_assertion_error = false;
+
+    try
+    {
+        throw assertion_error("test exception");
+    }
+    catch (const assertion_error&)
+    {
+        caught_as_assertion_error = true;
+    }
+    catch (...)
+    {
+        FAIL() << "Should not reach this catch block when catching as assertion_error";
+    }
+
+    try
+    {
+        throw assertion_error("test exception");
+    }
+    catch (const std::logic_error&)
+    {
+        caught_as_logic_error = true;
+    }
+    catch (...)
+    {
+        FAIL() << "Should not reach this catch block when catching as logic_error";
+    }
+
+    try
+    {
+        throw assertion_error("test exception");
+    }
+    catch (const std::exception&)
+    {
+        caught_as_exception = true;
+    }
+    catch (...)
+    {
+        FAIL() << "Should not reach this catch block when catching as exception";
+    }
+
+    EXPECT_TRUE(caught_as_assertion_error);
+    EXPECT_TRUE(caught_as_logic_error);
+    EXPECT_TRUE(caught_as_exception);
+}
