@@ -9,3 +9,4 @@ static void BM_Calculator(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_Calculator);
+BENCHMARK_MAIN();

@@ -35,8 +35,9 @@ public:
 
     template <typename... Args>
     explicit assertion_error(std::source_location location,
-                             std::string_view context, Args&&... args)
-        : std::logic_error(std::format(std::forward<Args>(args)...)),
+                             std::string_view context, 
+                             std::format_string<Args...> fmt, Args&&... args)
+        : std::logic_error(std::format(fmt, std::forward<Args>(args)...)),
           location_(location), trace_(std::stacktrace::current()),
           context_(context),
           timestamp_(std::chrono::high_resolution_clock::now())
