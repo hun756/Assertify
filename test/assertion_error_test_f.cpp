@@ -170,3 +170,27 @@ TEST_F(AssertionErrorTest, CanBeCaughtAsStdException)
     EXPECT_TRUE(caught_as_logic_error);
     EXPECT_TRUE(caught_as_exception);
 }
+
+TEST_F(AssertionErrorTest, SourceLocationIsAccurate) {
+    const auto expected_line = std::source_location::current().line() + 1;
+    const assertion_error error("test");
+    
+    const auto& location = error.where();
+    EXPECT_EQ(location.line(), expected_line);
+    
+    std::string file_name = location.file_name();
+    EXPECT_TRUE(file_name.find("test") != std::string::npos);
+    
+    std::string function_name = location.function_name();
+    EXPECT_TRUE(function_name.find("SourceLocationIsAccurate") != std::string::npos);
+}
+
+TEST_F(AssertionErrorTest, SourceLocationWithExplicitLocation) {
+    const auto custom_location = std::source_location::current();
+    const assertion_error error("test", custom_location);
+    
+    const auto& location = error.where();
+    EXPECT_EQ(location.line(), custom_location.line());
+    EXPECT_STREQ(location.file_name(), custom_location.file_name());
+    EXPECT_STREQ(location.function_name(), custom_location.function_name());
+}
