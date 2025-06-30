@@ -379,12 +379,13 @@ TEST_F(AssertionErrorTest, ThreadSafety)
     for (int t = 0; t < num_threads; ++t)
     {
         threads.emplace_back(
-            [&results, t, exceptions_per_thread]()
+            [&results, t]()
             {
-                results[t].reserve(exceptions_per_thread);
+                results[static_cast<std::size_t>(t)].reserve(
+                    exceptions_per_thread);
                 for (int i = 0; i < exceptions_per_thread; ++i)
                 {
-                    results[t].emplace_back(
+                    results[static_cast<std::size_t>(t)].emplace_back(
                         std::format("Thread {} exception {}", t, i),
                         std::source_location::current(),
                         std::format("Thread {} context", t));
@@ -399,7 +400,8 @@ TEST_F(AssertionErrorTest, ThreadSafety)
 
     for (int t = 0; t < num_threads; ++t)
     {
-        EXPECT_EQ(results[t].size(), exceptions_per_thread);
+        EXPECT_EQ(results[static_cast<std::size_t>(t)].size(),
+                  exceptions_per_thread);
         for (int i = 0; i < exceptions_per_thread; ++i)
         {
             const auto& error = results[t][i];
