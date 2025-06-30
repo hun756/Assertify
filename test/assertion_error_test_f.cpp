@@ -4,6 +4,7 @@
 #include <source_location>
 #include <stacktrace>
 #include <string>
+#include <thread>
 
 namespace testing_utils
 {
@@ -305,4 +306,38 @@ TEST_F(AssertionErrorTest, MoveSemantics)
     EXPECT_STREQ(error.what(), "moveable error");
     EXPECT_EQ(error.context(), "move context");
     EXPECT_TRUE(is_timestamp_valid(error.timestamp()));
+}
+
+TEST_F(AssertionErrorTest, RealWorldUsageScenario)
+{
+    auto validate_input = [](int value)
+    {
+        if (value < 0)
+        {
+            throw assertion_error(
+                std::source_location::current(), "Input validation",
+                "Invalid input value: {} (must be non-negative)", value);
+        }
+        return value * 2;
+    };
+
+    EXPECT_EQ(validate_input(5), 10);
+
+    EXPECT_THROW(
+        {
+            try
+            {
+                validate_input(-1);
+            }
+            catch (const assertion_error& e)
+            {
+                std::string error_message = e.what();
+                EXPECT_TRUE(error_message.find("Invalid input value: -1") !=
+                            std::string::npos);
+                EXPECT_EQ(e.context(), "Input validation");
+                EXPECT_TRUE(is_timestamp_valid(e.timestamp()));
+                throw;
+            }
+        },
+        assertion_error);
 }
