@@ -1,10 +1,12 @@
 #include <assertify/assertify.hpp>
 #include <chrono>
+#include <format>
 #include <gtest/gtest.h>
 #include <source_location>
 #include <stacktrace>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace testing_utils
 {
@@ -367,3 +369,47 @@ INSTANTIATE_TEST_SUITE_P(
                       "Unicode: 🎉 测试 Тест عربي",
                       "Multiline\nmessage\nwith\nnewlines"));
 
+TEST_F(AssertionErrorTest, ThreadSafety)
+{
+    constexpr int num_threads = 4;
+    constexpr int exceptions_per_thread = 100;
+    std::vector<std::thread> threads;
+    std::vector<std::vector<assertion_error>> results(num_threads);
+
+    for (int t = 0; t < num_threads; ++t)
+    {
+        threads.emplace_back(
+            [&results, t, exceptions_per_thread]()
+            {
+                results[t].reserve(exceptions_per_thread);
+                for (int i = 0; i < exceptions_per_thread; ++i)
+                {
+                    results[t].emplace_back(
+                        std::format("Thread {} exception {}", t, i),
+                        std::source_location::current(),
+                        std::format("Thread {} context", t));
+                }
+            });
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
+
+    for (int t = 0; t < num_threads; ++t)
+    {
+        EXPECT_EQ(results[t].size(), exceptions_per_thread);
+        for (int i = 0; i < exceptions_per_thread; ++i)
+        {
+            const auto& error = results[t][i];
+            std::string error_message = error.what();
+            std::string expected_message =
+                std::format("Thread {} exception {}", t, i);
+            EXPECT_TRUE(error_message.find(expected_message) !=
+                        std::string::npos);
+            EXPECT_EQ(error.context(), std::format("Thread {} context", t));
+            EXPECT_TRUE(is_timestamp_valid(error.timestamp()));
+        }
+    }
+}
