@@ -194,3 +194,28 @@ TEST_F(AssertionErrorTest, SourceLocationWithExplicitLocation) {
     EXPECT_STREQ(location.file_name(), custom_location.file_name());
     EXPECT_STREQ(location.function_name(), custom_location.function_name());
 }
+
+TEST_F(AssertionErrorTest, StackTraceIsNotEmpty) {
+    const assertion_error error("test");
+    
+    const auto& trace = error.stack_trace();
+    EXPECT_FALSE(trace.empty());
+    EXPECT_GT(trace.size(), 0);
+}
+
+TEST_F(AssertionErrorTest, StackTraceContainsCurrentFunction) {
+    const assertion_error error("test");
+    
+    const auto& trace = error.stack_trace();
+    bool found_test_function = false;
+    
+    for (const auto& entry : trace) {
+        auto desc = std::to_string(entry);
+        if (desc.find("StackTraceContainsCurrentFunction") != std::string::npos) {
+            found_test_function = true;
+            break;
+        }
+    }
+    
+    EXPECT_TRUE(found_test_function) << "Stack trace should contain current test function";
+}
