@@ -291,3 +291,18 @@ TEST_F(AssertionErrorTest, UnicodeInMessage)
 
     EXPECT_STREQ(error.what(), unicode_message);
 }
+
+TEST_F(AssertionErrorTest, MoveSemantics)
+{
+    auto create_error = []()
+    {
+        return assertion_error("moveable error",
+                               std::source_location::current(), "move context");
+    };
+
+    const auto error = create_error();
+
+    EXPECT_STREQ(error.what(), "moveable error");
+    EXPECT_EQ(error.context(), "move context");
+    EXPECT_TRUE(is_timestamp_valid(error.timestamp()));
+}
