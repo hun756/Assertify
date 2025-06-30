@@ -266,3 +266,28 @@ TEST_F(AssertionErrorTest, ConstCorrectnessAndNoexcept)
     [[maybe_unused]] const auto& timestamp = error.timestamp();
     [[maybe_unused]] const auto detailed = error.detailed_message();
 }
+
+TEST_F(AssertionErrorTest, VeryLongMessage)
+{
+    const std::string long_message(10000, 'A');
+    const assertion_error error(long_message);
+
+    EXPECT_EQ(std::string(error.what()), long_message);
+    EXPECT_TRUE(is_timestamp_valid(error.timestamp()));
+}
+
+TEST_F(AssertionErrorTest, SpecialCharactersInMessage)
+{
+    constexpr auto special_message = "Error with special chars: \n\t\r\0\x1F";
+    const assertion_error error(special_message);
+
+    EXPECT_STREQ(error.what(), special_message);
+}
+
+TEST_F(AssertionErrorTest, UnicodeInMessage)
+{
+    constexpr auto unicode_message = "Error: 测试 🚀 Ελληνικά";
+    const assertion_error error(unicode_message);
+
+    EXPECT_STREQ(error.what(), unicode_message);
+}
