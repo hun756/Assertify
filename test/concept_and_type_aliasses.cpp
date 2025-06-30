@@ -235,3 +235,63 @@ TEST_F(NumericConceptsTest, ComplexNumericValidation)
 
     SUCCEED();
 }
+
+class ContainerConceptsTest : public ConceptsAndAliasesTest
+{
+};
+
+TEST_F(ContainerConceptsTest, ContainerTypeValidation)
+{
+    static_assert(container_type<std::vector<int>>);
+    static_assert(container_type<std::list<int>>);
+    static_assert(container_type<std::array<int, 5>>);
+    static_assert(container_type<std::span<int>>);
+    static_assert(container_type<fast_vector<int>>);
+
+    static_assert(container_type<std::map<int, int>>);
+    static_assert(container_type<std::unordered_map<int, int>>);
+    static_assert(container_type<std::set<int>>);
+    static_assert(container_type<fast_unordered_map<int>>);
+
+    static_assert(!container_type<int>);
+    static_assert(!container_type<std::string_view>);
+    static_assert(!container_type<double>);
+
+    SUCCEED();
+}
+
+TEST_F(ContainerConceptsTest, AssociativeContainerValidation)
+{
+    static_assert(associative_container<std::map<int, std::string>>);
+    static_assert(associative_container<std::unordered_map<std::string, int>>);
+    static_assert(associative_container<fast_unordered_map<int>>);
+
+    static_assert(!associative_container<std::vector<int>>);
+    static_assert(!associative_container<std::list<std::string>>);
+    static_assert(!associative_container<std::array<int, 5>>);
+
+    std::map<int, std::string> map;
+    map[1] = "one";
+    auto it = map.find(1);
+    EXPECT_NE(it, map.end());
+    EXPECT_EQ(it->second, "one");
+
+    SUCCEED();
+}
+
+TEST_F(ContainerConceptsTest, SequenceContainerValidation)
+{
+    static_assert(sequence_container<std::vector<int>>);
+    static_assert(sequence_container<std::list<int>>);
+    static_assert(sequence_container<std::array<int, 5>>);
+    static_assert(sequence_container<fast_vector<int>>);
+
+    static_assert(!sequence_container<std::map<int, int>>);
+    static_assert(!sequence_container<std::unordered_map<int, int>>);
+    static_assert(!sequence_container<fast_unordered_map<int>>);
+
+    static_assert(!sequence_container<int>);
+    static_assert(!sequence_container<std::string_view>);
+
+    SUCCEED();
+}
