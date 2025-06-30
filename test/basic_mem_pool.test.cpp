@@ -1,7 +1,9 @@
 #include <assertify/assertify.hpp>
 #include <atomic>
 #include <chrono>
+#include <future>
 #include <gtest/gtest.h>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -337,7 +339,7 @@ TEST_F(BasicMemoryPoolTest, ResetFunctionality)
 {
     for (int i = 0; i < 5; ++i)
     {
-        pool_->allocate<int>();
+        [[maybe_unused]] auto* ptr = pool_->allocate<int>();
     }
 
     EXPECT_EQ(pool_->active_allocation_count(), 5);
@@ -357,19 +359,19 @@ TEST_F(BasicMemoryPoolTest, ThreadSafetyAllocations)
     std::vector<std::thread> threads;
     std::vector<std::vector<int*>> thread_ptrs(num_threads);
 
-    for (int t = 0; t < num_threads; ++t)
+    for (size_t t = 0; t < num_threads; ++t)
     {
         threads.emplace_back(
             [this, t, &thread_ptrs]()
             {
-                thread_ptrs[static_cast<size_t>(t)].reserve(
-                    allocations_per_thread);
+                    thread_ptrs[t].reserve(
+                        allocations_per_thread);
                 for (int i = 0; i < allocations_per_thread; ++i)
                 {
                     auto* ptr = pool_->allocate<int>();
                     EXPECT_NE(ptr, nullptr);
-                    thread_ptrs[t].push_back(ptr);
-                    *ptr = t * 1000 + i;
+                    thread_ptrs[static_cast<size_t>(t)].push_back(ptr);
+                    *ptr = static_cast<int>(t) * 1000 + static_cast<int>(i);
                 }
             });
     }
@@ -382,15 +384,15 @@ TEST_F(BasicMemoryPoolTest, ThreadSafetyAllocations)
     EXPECT_EQ(pool_->active_allocation_count(),
               num_threads * allocations_per_thread);
 
-    for (int t = 0; t < num_threads; ++t)
+    for (size_t t = 0; t < num_threads; ++t)
     {
-        for (int i = 0; i < allocations_per_thread; ++i)
+        for (size_t i = 0; i < allocations_per_thread; ++i)
         {
             EXPECT_EQ(*thread_ptrs[t][i], t * 1000 + i);
         }
     }
 
-    for (int t = 0; t < num_threads; ++t)
+    for (size_t t = 0; t < num_threads; ++t)
     {
         for (auto* ptr : thread_ptrs[t])
         {
@@ -408,20 +410,25 @@ TEST_F(BasicMemoryPoolTest, ThreadSafetyConcurrentAllocDealloc)
     std::atomic<int> total_allocations{0};
     std::atomic<int> total_deallocations{0};
 
+    constexpr size_t num_allocators = 4;
+    std::vector<std::mutex> ptr_mutexes(num_allocators);
+    std::vector<std::vector<int*>> allocator_ptrs(num_allocators);
     std::vector<std::thread> allocators;
-    std::vector<std::vector<int*>> allocator_ptrs(4);
 
-    for (int i = 0; i < 4; ++i)
+    for (size_t i = 0; i < num_allocators; ++i)
     {
         allocators.emplace_back(
-            [this, i, &allocator_ptrs, &stop_flag, &total_allocations]()
+            [this, i, &allocator_ptrs, &ptr_mutexes, &stop_flag, &total_allocations]()
             {
                 while (!stop_flag.load())
                 {
                     auto* ptr = pool_->allocate<int>();
                     if (ptr)
                     {
-                        allocator_ptrs[i].push_back(ptr);
+                        {
+                            std::lock_guard<std::mutex> lock(ptr_mutexes[i]);
+                            allocator_ptrs[i].push_back(ptr);
+                        }
                         total_allocations.fetch_add(1);
                     }
                     std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -430,16 +437,23 @@ TEST_F(BasicMemoryPoolTest, ThreadSafetyConcurrentAllocDealloc)
     }
 
     std::thread deallocator(
-        [this, &allocator_ptrs, &stop_flag, &total_deallocations]()
+        [this, &allocator_ptrs, &ptr_mutexes, &stop_flag, &total_deallocations]()
         {
             while (!stop_flag.load())
             {
-                for (auto& ptrs : allocator_ptrs)
+                for (size_t i = 0; i < allocator_ptrs.size(); ++i)
                 {
-                    if (!ptrs.empty())
+                    int* ptr = nullptr;
                     {
-                        auto* ptr = ptrs.back();
-                        ptrs.pop_back();
+                        std::lock_guard<std::mutex> lock(ptr_mutexes[i]);
+                        if (!allocator_ptrs[i].empty())
+                        {
+                            ptr = allocator_ptrs[i].back();
+                            allocator_ptrs[i].pop_back();
+                        }
+                    }
+                    if (ptr)
+                    {
                         pool_->deallocate(ptr);
                         total_deallocations.fetch_add(1);
                     }
@@ -457,12 +471,14 @@ TEST_F(BasicMemoryPoolTest, ThreadSafetyConcurrentAllocDealloc)
     }
     deallocator.join();
 
-    for (auto& ptrs : allocator_ptrs)
+    for (size_t i = 0; i < allocator_ptrs.size(); ++i)
     {
-        for (auto* ptr : ptrs)
+        std::lock_guard<std::mutex> lock(ptr_mutexes[i]);
+        for (auto* ptr : allocator_ptrs[i])
         {
             pool_->deallocate(ptr);
         }
+        allocator_ptrs[i].clear();
     }
 
     EXPECT_GT(total_allocations.load(), 0);
@@ -530,4 +546,85 @@ TEST_F(BasicMemoryPoolTest, ConstMemberFunctions)
     EXPECT_EQ(count, 0);
     EXPECT_FALSE(has_leaks);
     EXPECT_TRUE(report.empty());
+}
+
+class ThreadLocalPoolTest : public BaseTest
+{
+};
+
+TEST_F(ThreadLocalPoolTest, ThreadLocalAccess)
+{
+    constexpr int num_threads = 4;
+    std::vector<std::future<void*>> futures;
+
+    for (int i = 0; i < num_threads; ++i)
+    {
+        futures.push_back(std::async(std::launch::async,
+                                     []() -> void*
+                                     {
+                                         auto* ptr = tl_pool.allocate<int>();
+                                         *ptr = 42;
+                                         return ptr;
+                                     }));
+    }
+
+    std::vector<void*> ptrs;
+    for (auto& future : futures)
+    {
+        ptrs.push_back(future.get());
+    }
+
+    for (size_t i = 0; i < ptrs.size(); ++i)
+    {
+        for (size_t j = i + 1; j < ptrs.size(); ++j)
+        {
+            EXPECT_NE(ptrs[i], ptrs[j]);
+        }
+    }
+}
+
+TEST_F(BasicMemoryPoolTest, RealWorldScenario) {
+    struct DataBlock {
+        int id;
+        double values[10];
+        char description[64];
+    };
+    
+    std::vector<DataBlock*> active_blocks;
+    constexpr int total_operations = 1000;
+    
+    for (int i = 0; i < total_operations; ++i) {
+        if (i % 3 == 0 && !active_blocks.empty()) {
+            auto index = static_cast<size_t>(i) % active_blocks.size();
+            auto it = active_blocks.begin() + static_cast<std::ptrdiff_t>(index);
+            pool_->deallocate(*it);
+            active_blocks.erase(it);
+        } else {
+            auto* block = pool_->allocate<DataBlock>();
+            EXPECT_NE(block, nullptr);
+            
+            block->id = i;
+            for (int j = 0; j < 10; ++j) {
+                block->values[j] = i * 10.0 + j;
+            }
+            std::snprintf(block->description, sizeof(block->description), "Block_%d", i);
+            
+            active_blocks.push_back(block);
+        }
+    }
+    
+    for (const auto* block : active_blocks) {
+        EXPECT_GE(block->id, 0);
+        EXPECT_LT(block->id, total_operations);
+        
+        for (int j = 0; j < 10; ++j) {
+            EXPECT_DOUBLE_EQ(block->values[j], block->id * 10.0 + j);
+        }
+    }
+    
+    for (auto* block : active_blocks) {
+        pool_->deallocate(block);
+    }
+    
+    EXPECT_FALSE(pool_->has_memory_leaks());
 }
