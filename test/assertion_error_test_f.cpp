@@ -250,3 +250,19 @@ TEST_F(AssertionErrorTest, TimestampProgression)
 
     EXPECT_LT(error1.timestamp(), error2.timestamp());
 }
+
+TEST_F(AssertionErrorTest, ConstCorrectnessAndNoexcept)
+{
+    const assertion_error error("test");
+
+    static_assert(noexcept(error.where()));
+    static_assert(noexcept(error.stack_trace()));
+    static_assert(noexcept(error.context()));
+    static_assert(noexcept(error.timestamp()));
+
+    [[maybe_unused]] const auto& location = error.where();
+    [[maybe_unused]] const auto& trace = error.stack_trace();
+    [[maybe_unused]] const auto& context = error.context();
+    [[maybe_unused]] const auto& timestamp = error.timestamp();
+    [[maybe_unused]] const auto detailed = error.detailed_message();
+}
