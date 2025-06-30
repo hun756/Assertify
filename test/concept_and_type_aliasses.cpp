@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <assertify/assertify.hpp>
+#include <complex>
 #include <gtest/gtest.h>
 #include <ranges>
 
@@ -155,7 +156,6 @@ TEST_F(TypeAliasesTest, FastUnorderedMapOperations)
 
     fast_unordered_map<int> map(alloc);
 
-    // Test insertions
     map[1] = 10;
     map[2] = 20;
     map.insert({3, 30});
@@ -192,4 +192,46 @@ TEST_F(TypeAliasesTest, TypeAliasCompatibility)
         vec | std::views::filter([](int n) { return n % 2 == 0; });
     std::vector<int> evens(even_numbers.begin(), even_numbers.end());
     EXPECT_EQ(evens, std::vector<int>({2, 8}));
+}
+
+class NumericConceptsTest : public ConceptsAndAliasesTest
+{
+};
+
+TEST_F(NumericConceptsTest, NumericTypeValidation)
+{
+    static_assert(numeric_type<int>);
+    static_assert(numeric_type<long>);
+    static_assert(numeric_type<short>);
+    static_assert(numeric_type<char>);
+    static_assert(numeric_type<unsigned int>);
+    static_assert(numeric_type<std::size_t>);
+
+    static_assert(numeric_type<float>);
+    static_assert(numeric_type<double>);
+    static_assert(numeric_type<long double>);
+
+    static_assert(!numeric_type<std::string>);
+    static_assert(!numeric_type<std::vector<int>>);
+    static_assert(!numeric_type<void*>);
+    static_assert(!numeric_type<ComparableType>);
+
+    SUCCEED();
+}
+
+TEST_F(NumericConceptsTest, ComplexNumericValidation)
+{
+    static_assert(complex_numeric<std::complex<float>>);
+    static_assert(complex_numeric<std::complex<double>>);
+    static_assert(complex_numeric<std::complex<long double>>);
+
+    static_assert(!complex_numeric<int>);
+    static_assert(!complex_numeric<double>);
+    static_assert(!complex_numeric<std::string>);
+
+    std::complex<double> c(3.0, 4.0);
+    EXPECT_DOUBLE_EQ(c.real(), 3.0);
+    EXPECT_DOUBLE_EQ(c.imag(), 4.0);
+
+    SUCCEED();
 }
