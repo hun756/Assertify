@@ -137,7 +137,8 @@ TEST_F(AssertionErrorTest, CanBeCaughtAsStdException)
     }
     catch (...)
     {
-        FAIL() << "Should not reach this catch block when catching as assertion_error";
+        FAIL() << "Should not reach this catch block when catching as "
+                  "assertion_error";
     }
 
     try
@@ -150,7 +151,8 @@ TEST_F(AssertionErrorTest, CanBeCaughtAsStdException)
     }
     catch (...)
     {
-        FAIL() << "Should not reach this catch block when catching as logic_error";
+        FAIL()
+            << "Should not reach this catch block when catching as logic_error";
     }
 
     try
@@ -163,7 +165,8 @@ TEST_F(AssertionErrorTest, CanBeCaughtAsStdException)
     }
     catch (...)
     {
-        FAIL() << "Should not reach this catch block when catching as exception";
+        FAIL()
+            << "Should not reach this catch block when catching as exception";
     }
 
     EXPECT_TRUE(caught_as_assertion_error);
@@ -171,51 +174,79 @@ TEST_F(AssertionErrorTest, CanBeCaughtAsStdException)
     EXPECT_TRUE(caught_as_exception);
 }
 
-TEST_F(AssertionErrorTest, SourceLocationIsAccurate) {
+TEST_F(AssertionErrorTest, SourceLocationIsAccurate)
+{
     const auto expected_line = std::source_location::current().line() + 1;
     const assertion_error error("test");
-    
+
     const auto& location = error.where();
     EXPECT_EQ(location.line(), expected_line);
-    
+
     std::string file_name = location.file_name();
     EXPECT_TRUE(file_name.find("test") != std::string::npos);
-    
+
     std::string function_name = location.function_name();
-    EXPECT_TRUE(function_name.find("SourceLocationIsAccurate") != std::string::npos);
+    EXPECT_TRUE(function_name.find("SourceLocationIsAccurate") !=
+                std::string::npos);
 }
 
-TEST_F(AssertionErrorTest, SourceLocationWithExplicitLocation) {
+TEST_F(AssertionErrorTest, SourceLocationWithExplicitLocation)
+{
     const auto custom_location = std::source_location::current();
     const assertion_error error("test", custom_location);
-    
+
     const auto& location = error.where();
     EXPECT_EQ(location.line(), custom_location.line());
     EXPECT_STREQ(location.file_name(), custom_location.file_name());
     EXPECT_STREQ(location.function_name(), custom_location.function_name());
 }
 
-TEST_F(AssertionErrorTest, StackTraceIsNotEmpty) {
+TEST_F(AssertionErrorTest, StackTraceIsNotEmpty)
+{
     const assertion_error error("test");
-    
+
     const auto& trace = error.stack_trace();
     EXPECT_FALSE(trace.empty());
     EXPECT_GT(trace.size(), 0);
 }
 
-TEST_F(AssertionErrorTest, StackTraceContainsCurrentFunction) {
+TEST_F(AssertionErrorTest, StackTraceContainsCurrentFunction)
+{
     const assertion_error error("test");
-    
+
     const auto& trace = error.stack_trace();
     bool found_test_function = false;
-    
-    for (const auto& entry : trace) {
+
+    for (const auto& entry : trace)
+    {
         auto desc = std::to_string(entry);
-        if (desc.find("StackTraceContainsCurrentFunction") != std::string::npos) {
+        if (desc.find("StackTraceContainsCurrentFunction") != std::string::npos)
+        {
             found_test_function = true;
             break;
         }
     }
-    
-    EXPECT_TRUE(found_test_function) << "Stack trace should contain current test function";
+
+    EXPECT_TRUE(found_test_function)
+        << "Stack trace should contain current test function";
+}
+
+TEST_F(AssertionErrorTest, TimestampIsReasonable)
+{
+    const auto before = std::chrono::high_resolution_clock::now();
+    const assertion_error error("test");
+    const auto after = std::chrono::high_resolution_clock::now();
+
+    const auto timestamp = error.timestamp();
+    EXPECT_GE(timestamp, before);
+    EXPECT_LE(timestamp, after);
+}
+
+TEST_F(AssertionErrorTest, TimestampProgression)
+{
+    const assertion_error error1("first");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    const assertion_error error2("second");
+
+    EXPECT_LT(error1.timestamp(), error2.timestamp());
 }
