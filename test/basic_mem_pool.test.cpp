@@ -364,8 +364,7 @@ TEST_F(BasicMemoryPoolTest, ThreadSafetyAllocations)
         threads.emplace_back(
             [this, t, &thread_ptrs]()
             {
-                    thread_ptrs[t].reserve(
-                        allocations_per_thread);
+                thread_ptrs[t].reserve(allocations_per_thread);
                 for (int i = 0; i < allocations_per_thread; ++i)
                 {
                     auto* ptr = pool_->allocate<int>();
@@ -418,7 +417,8 @@ TEST_F(BasicMemoryPoolTest, ThreadSafetyConcurrentAllocDealloc)
     for (size_t i = 0; i < num_allocators; ++i)
     {
         allocators.emplace_back(
-            [this, i, &allocator_ptrs, &ptr_mutexes, &stop_flag, &total_allocations]()
+            [this, i, &allocator_ptrs, &ptr_mutexes, &stop_flag,
+             &total_allocations]()
             {
                 while (!stop_flag.load())
                 {
@@ -437,7 +437,8 @@ TEST_F(BasicMemoryPoolTest, ThreadSafetyConcurrentAllocDealloc)
     }
 
     std::thread deallocator(
-        [this, &allocator_ptrs, &ptr_mutexes, &stop_flag, &total_deallocations]()
+        [this, &allocator_ptrs, &ptr_mutexes, &stop_flag,
+         &total_deallocations]()
         {
             while (!stop_flag.load())
             {
@@ -583,48 +584,60 @@ TEST_F(ThreadLocalPoolTest, ThreadLocalAccess)
     }
 }
 
-TEST_F(BasicMemoryPoolTest, RealWorldScenario) {
-    struct DataBlock {
+TEST_F(BasicMemoryPoolTest, RealWorldScenario)
+{
+    struct DataBlock
+    {
         int id;
         double values[10];
         char description[64];
     };
-    
+
     std::vector<DataBlock*> active_blocks;
     constexpr int total_operations = 1000;
-    
-    for (int i = 0; i < total_operations; ++i) {
-        if (i % 3 == 0 && !active_blocks.empty()) {
+
+    for (int i = 0; i < total_operations; ++i)
+    {
+        if (i % 3 == 0 && !active_blocks.empty())
+        {
             auto index = static_cast<size_t>(i) % active_blocks.size();
-            auto it = active_blocks.begin() + static_cast<std::ptrdiff_t>(index);
+            auto it =
+                active_blocks.begin() + static_cast<std::ptrdiff_t>(index);
             pool_->deallocate(*it);
             active_blocks.erase(it);
-        } else {
+        }
+        else
+        {
             auto* block = pool_->allocate<DataBlock>();
             EXPECT_NE(block, nullptr);
-            
+
             block->id = i;
-            for (int j = 0; j < 10; ++j) {
+            for (int j = 0; j < 10; ++j)
+            {
                 block->values[j] = i * 10.0 + j;
             }
-            std::snprintf(block->description, sizeof(block->description), "Block_%d", i);
-            
+            std::snprintf(block->description, sizeof(block->description),
+                          "Block_%d", i);
+
             active_blocks.push_back(block);
         }
     }
-    
-    for (const auto* block : active_blocks) {
+
+    for (const auto* block : active_blocks)
+    {
         EXPECT_GE(block->id, 0);
         EXPECT_LT(block->id, total_operations);
-        
-        for (int j = 0; j < 10; ++j) {
+
+        for (int j = 0; j < 10; ++j)
+        {
             EXPECT_DOUBLE_EQ(block->values[j], block->id * 10.0 + j);
         }
     }
-    
-    for (auto* block : active_blocks) {
+
+    for (auto* block : active_blocks)
+    {
         pool_->deallocate(block);
     }
-    
+
     EXPECT_FALSE(pool_->has_memory_leaks());
 }
