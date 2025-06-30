@@ -341,3 +341,29 @@ TEST_F(AssertionErrorTest, RealWorldUsageScenario)
         },
         assertion_error);
 }
+
+class AssertionErrorParameterizedTest
+    : public AssertionErrorTest,
+      public ::testing::WithParamInterface<std::string>
+{
+};
+
+TEST_P(AssertionErrorParameterizedTest, DifferentMessageTypes)
+{
+    const auto& message = GetParam();
+    const assertion_error error(message);
+
+    EXPECT_STREQ(error.what(), message.c_str());
+    EXPECT_TRUE(is_timestamp_valid(error.timestamp()));
+    EXPECT_FALSE(error.stack_trace().empty());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    MessageVariations, AssertionErrorParameterizedTest,
+    ::testing::Values("", "Simple message", "Message with numbers: 123 456.789",
+                      "Message with symbols: !@#$%^&*()",
+                      "Very long message that exceeds typical buffer sizes and "
+                      "contains lots of text to test memory handling",
+                      "Unicode: 🎉 测试 Тест عربي",
+                      "Multiline\nmessage\nwith\nnewlines"));
+
