@@ -1,17 +1,20 @@
 #include <algorithm>
 #include <assertify/assertify.hpp>
 #include <complex>
+#include <functional>
 #include <gtest/gtest.h>
+#include <iostream>
+#include <memory>
+#include <memory_resource>
+#include <optional>
 #include <ranges>
 #include <span>
+#include <sstream>
 #include <string>
 #include <string_view>
-#include <vector>
-#include <memory_resource>
 #include <unordered_map>
-#include <optional>
 #include <variant>
-#include <functional>
+#include <vector>
 
 using namespace assertify;
 using namespace assertify::detail;
@@ -353,90 +356,144 @@ TEST_F(StringAndPointerConceptsTest, PointerLikeValidation)
     SUCCEED();
 }
 
-class OptionalVariantConceptsTest : public ConceptsAndAliasesTest {};
+class OptionalVariantConceptsTest : public ConceptsAndAliasesTest
+{
+};
 
-TEST_F(OptionalVariantConceptsTest, OptionalLikeValidation) {
+TEST_F(OptionalVariantConceptsTest, OptionalLikeValidation)
+{
     static_assert(optional_like<std::optional<int>>);
     static_assert(optional_like<std::optional<std::string>>);
     static_assert(optional_like<std::optional<ComparableType>>);
-    
+
     static_assert(!optional_like<int>);
     static_assert(!optional_like<std::string>);
     static_assert(!optional_like<std::vector<int>>);
-    
+
     std::optional<int> opt1;
     std::optional<int> opt2 = 42;
-    
+
     EXPECT_FALSE(opt1.has_value());
     EXPECT_TRUE(opt2.has_value());
     EXPECT_EQ(*opt2, 42);
-    
+
     SUCCEED();
 }
 
-TEST_F(OptionalVariantConceptsTest, VariantLikeValidation) {
+TEST_F(OptionalVariantConceptsTest, VariantLikeValidation)
+{
     static_assert(variant_like<std::variant<int, std::string>>);
     static_assert(variant_like<std::variant<double, char, bool>>);
-    
+
     static_assert(!variant_like<int>);
     static_assert(!variant_like<std::string>);
     static_assert(!variant_like<std::optional<int>>);
-    
+
     std::variant<int, std::string> var = 42;
     EXPECT_EQ(var.index(), 0);
-    
+
     var = std::string("hello");
     EXPECT_EQ(var.index(), 1);
-    
-    std::visit([](const auto& value) {
-        if constexpr (std::is_same_v<std::decay_t<decltype(value)>, std::string>) {
-            EXPECT_EQ(value, "hello");
-        }
-    }, var);
-    
+
+    std::visit(
+        [](const auto& value)
+        {
+            if constexpr (std::is_same_v<std::decay_t<decltype(value)>,
+                                         std::string>)
+            {
+                EXPECT_EQ(value, "hello");
+            }
+        },
+        var);
+
     SUCCEED();
 }
 
-class FunctionalConceptsTest : public ConceptsAndAliasesTest {};
+class FunctionalConceptsTest : public ConceptsAndAliasesTest
+{
+};
 
-TEST_F(FunctionalConceptsTest, CallableTypeValidation) {
-    static_assert(callable_type<void(*)()>);
-    static_assert(!callable_type<int(*)(int)>);
-    
+TEST_F(FunctionalConceptsTest, CallableTypeValidation)
+{
+    static_assert(callable_type<void (*)()>);
+    static_assert(!callable_type<int (*)(int)>);
+
     auto lambda = []() { return 42; };
     static_assert(callable_type<decltype(lambda)>);
-    
+
     static_assert(callable_type<std::function<void()>>);
     static_assert(!callable_type<std::function<int(double)>>);
-    
+
     static_assert(!callable_type<int>);
     static_assert(!callable_type<std::string>);
     static_assert(!callable_type<std::vector<int>>);
-    
+
     auto func = []() { return "called"; };
     EXPECT_EQ(func(), "called");
-    
+
     SUCCEED();
 }
 
-TEST_F(FunctionalConceptsTest, BooleanConvertibleValidation) {
+TEST_F(FunctionalConceptsTest, BooleanConvertibleValidation)
+{
     static_assert(boolean_convertible<bool>);
     static_assert(boolean_convertible<int>);
     static_assert(boolean_convertible<double>);
     static_assert(boolean_convertible<char*>);
     static_assert(boolean_convertible<std::unique_ptr<int>>);
-    
+
     static_assert(boolean_convertible<PointerLikeType>);
-    
+
     int zero = 0;
     int non_zero = 42;
     std::unique_ptr<int> null_ptr;
     std::unique_ptr<int> valid_ptr = std::make_unique<int>(100);
-    
+
     EXPECT_FALSE(static_cast<bool>(zero));
     EXPECT_TRUE(static_cast<bool>(non_zero));
     EXPECT_FALSE(static_cast<bool>(null_ptr));
     EXPECT_TRUE(static_cast<bool>(valid_ptr));
-    
+
+    SUCCEED();
+}
+
+class StreamHashConceptsTest : public ConceptsAndAliasesTest
+{
+};
+
+TEST_F(StreamHashConceptsTest, StreamableValidation)
+{
+    static_assert(streamable<int>);
+    static_assert(streamable<double>);
+    static_assert(streamable<std::string>);
+    static_assert(streamable<char>);
+
+    static_assert(streamable<StreamableType>);
+
+    static_assert(!streamable<std::vector<int>>);
+
+    std::ostringstream oss;
+    StreamableType obj;
+    oss << obj;
+    EXPECT_EQ(oss.str(), "streamable");
+
+    SUCCEED();
+}
+
+TEST_F(StreamHashConceptsTest, HashableValidation)
+{
+    static_assert(hashable<int>);
+    static_assert(hashable<std::string>);
+    static_assert(hashable<double>);
+    static_assert(hashable<char*>);
+
+    static_assert(!hashable<ComparableType>);
+    static_assert(!hashable<std::vector<int>>);
+
+    std::hash<std::string> string_hash;
+    std::string test_str = "test";
+    auto hash_value = string_hash(test_str);
+    EXPECT_NE(hash_value, 0);
+
     SUCCEED();
 }
