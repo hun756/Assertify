@@ -295,3 +295,51 @@ TEST_F(ContainerConceptsTest, SequenceContainerValidation)
 
     SUCCEED();
 }
+
+class StringAndPointerConceptsTest : public ConceptsAndAliasesTest
+{
+};
+
+TEST_F(StringAndPointerConceptsTest, StringLikeValidation)
+{
+    static_assert(string_like<std::string>);
+    static_assert(string_like<std::string_view>);
+    static_assert(string_like<const char*>);
+    static_assert(string_like<char*>);
+    static_assert(string_like<fast_string<char>>);
+
+    static_assert(!string_like<int>);
+    static_assert(!string_like<std::vector<char>>);
+    static_assert(!string_like<std::complex<double>>);
+
+    std::string str = "test";
+    std::string_view sv = str;
+    const char* cstr = str.c_str();
+
+    EXPECT_EQ(std::string_view(str), sv);
+    EXPECT_EQ(std::string(cstr), str);
+
+    SUCCEED();
+}
+
+TEST_F(StringAndPointerConceptsTest, PointerLikeValidation)
+{
+    static_assert(pointer_like<int*>);
+    static_assert(pointer_like<const char*>);
+    static_assert(pointer_like<void*>);
+
+    static_assert(pointer_like<std::unique_ptr<int>>);
+    static_assert(pointer_like<std::shared_ptr<std::string>>);
+
+    static_assert(pointer_like<PointerLikeType>);
+
+    static_assert(!pointer_like<int>);
+    static_assert(!pointer_like<std::string>);
+    static_assert(!pointer_like<std::vector<int>>);
+
+    PointerLikeType ptr_like;
+    EXPECT_TRUE(static_cast<bool>(ptr_like));
+    EXPECT_EQ(*ptr_like, 42);
+
+    SUCCEED();
+}
