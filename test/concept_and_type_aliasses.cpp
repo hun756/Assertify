@@ -3,6 +3,14 @@
 #include <complex>
 #include <gtest/gtest.h>
 #include <ranges>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+#include <memory_resource>
+#include <unordered_map>
+#include <optional>
+#include <variant>
 
 using namespace assertify;
 using namespace assertify::detail;
@@ -341,5 +349,49 @@ TEST_F(StringAndPointerConceptsTest, PointerLikeValidation)
     EXPECT_TRUE(static_cast<bool>(ptr_like));
     EXPECT_EQ(*ptr_like, 42);
 
+    SUCCEED();
+}
+
+class OptionalVariantConceptsTest : public ConceptsAndAliasesTest {};
+
+TEST_F(OptionalVariantConceptsTest, OptionalLikeValidation) {
+    static_assert(optional_like<std::optional<int>>);
+    static_assert(optional_like<std::optional<std::string>>);
+    static_assert(optional_like<std::optional<ComparableType>>);
+    
+    static_assert(!optional_like<int>);
+    static_assert(!optional_like<std::string>);
+    static_assert(!optional_like<std::vector<int>>);
+    
+    std::optional<int> opt1;
+    std::optional<int> opt2 = 42;
+    
+    EXPECT_FALSE(opt1.has_value());
+    EXPECT_TRUE(opt2.has_value());
+    EXPECT_EQ(*opt2, 42);
+    
+    SUCCEED();
+}
+
+TEST_F(OptionalVariantConceptsTest, VariantLikeValidation) {
+    static_assert(variant_like<std::variant<int, std::string>>);
+    static_assert(variant_like<std::variant<double, char, bool>>);
+    
+    static_assert(!variant_like<int>);
+    static_assert(!variant_like<std::string>);
+    static_assert(!variant_like<std::optional<int>>);
+    
+    std::variant<int, std::string> var = 42;
+    EXPECT_EQ(var.index(), 0);
+    
+    var = std::string("hello");
+    EXPECT_EQ(var.index(), 1);
+    
+    std::visit([](const auto& value) {
+        if constexpr (std::is_same_v<std::decay_t<decltype(value)>, std::string>) {
+            EXPECT_EQ(value, "hello");
+        }
+    }, var);
+    
     SUCCEED();
 }
