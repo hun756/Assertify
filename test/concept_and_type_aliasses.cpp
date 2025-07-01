@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <optional>
 #include <variant>
+#include <functional>
 
 using namespace assertify;
 using namespace assertify::detail;
@@ -392,6 +393,50 @@ TEST_F(OptionalVariantConceptsTest, VariantLikeValidation) {
             EXPECT_EQ(value, "hello");
         }
     }, var);
+    
+    SUCCEED();
+}
+
+class FunctionalConceptsTest : public ConceptsAndAliasesTest {};
+
+TEST_F(FunctionalConceptsTest, CallableTypeValidation) {
+    static_assert(callable_type<void(*)()>);
+    static_assert(!callable_type<int(*)(int)>);
+    
+    auto lambda = []() { return 42; };
+    static_assert(callable_type<decltype(lambda)>);
+    
+    static_assert(callable_type<std::function<void()>>);
+    static_assert(!callable_type<std::function<int(double)>>);
+    
+    static_assert(!callable_type<int>);
+    static_assert(!callable_type<std::string>);
+    static_assert(!callable_type<std::vector<int>>);
+    
+    auto func = []() { return "called"; };
+    EXPECT_EQ(func(), "called");
+    
+    SUCCEED();
+}
+
+TEST_F(FunctionalConceptsTest, BooleanConvertibleValidation) {
+    static_assert(boolean_convertible<bool>);
+    static_assert(boolean_convertible<int>);
+    static_assert(boolean_convertible<double>);
+    static_assert(boolean_convertible<char*>);
+    static_assert(boolean_convertible<std::unique_ptr<int>>);
+    
+    static_assert(boolean_convertible<PointerLikeType>);
+    
+    int zero = 0;
+    int non_zero = 42;
+    std::unique_ptr<int> null_ptr;
+    std::unique_ptr<int> valid_ptr = std::make_unique<int>(100);
+    
+    EXPECT_FALSE(static_cast<bool>(zero));
+    EXPECT_TRUE(static_cast<bool>(non_zero));
+    EXPECT_FALSE(static_cast<bool>(null_ptr));
+    EXPECT_TRUE(static_cast<bool>(valid_ptr));
     
     SUCCEED();
 }

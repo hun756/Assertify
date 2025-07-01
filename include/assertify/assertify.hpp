@@ -258,7 +258,9 @@ template <typename T>
 concept callable_type = std::invocable<T>;
 
 template <typename T>
-concept boolean_convertible = std::convertible_to<T, bool>;
+concept boolean_convertible = requires(T t) {
+    { static_cast<bool>(t) } -> std::convertible_to<bool>;
+};
 
 template <typename T>
 concept streamable = requires(std::ostream& os, const T& t) { os << t; };
