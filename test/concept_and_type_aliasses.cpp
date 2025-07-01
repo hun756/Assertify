@@ -497,3 +497,73 @@ TEST_F(StreamHashConceptsTest, HashableValidation)
 
     SUCCEED();
 }
+
+class ComparisonConceptsTest : public ConceptsAndAliasesTest {};
+
+TEST_F(ComparisonConceptsTest, ComparableValidation) {
+    static_assert(comparable<int>);
+    static_assert(comparable<double>);
+    static_assert(comparable<std::string>);
+    static_assert(comparable<ComparableType>);
+    
+    ComparableType a{1};
+    ComparableType b{2};
+    
+    EXPECT_TRUE(a < b);
+    EXPECT_FALSE(a > b);
+    EXPECT_TRUE(a <= b);
+    EXPECT_FALSE(a >= b);
+    
+    auto ordering = a <=> b;
+    EXPECT_TRUE(ordering < 0);
+    
+    SUCCEED();
+}
+
+TEST_F(ComparisonConceptsTest, EqualityComparableValidation) {
+    static_assert(equality_comparable<int>);
+    static_assert(equality_comparable<std::string>);
+    static_assert(equality_comparable<ComparableType>);
+    
+    ComparableType a{42};
+    ComparableType b{42};
+    ComparableType c{100};
+    
+    EXPECT_TRUE(a == b);
+    EXPECT_FALSE(a == c);
+    EXPECT_FALSE(a != b);
+    EXPECT_TRUE(a != c);
+    
+    SUCCEED();
+}
+
+TEST_F(ComparisonConceptsTest, ComparableWithValidation) {
+    static_assert(comparable_with<int, int>);
+    static_assert(comparable_with<std::string, std::string>);
+    
+    static_assert(comparable_with<int, double>);
+    static_assert(comparable_with<std::string, const char*>);
+    
+    int i = 5;
+    double d = 5.0;
+    EXPECT_TRUE(i == d);
+    EXPECT_FALSE(i < d);
+    
+    SUCCEED();
+}
+
+TEST_F(ComparisonConceptsTest, RegularTypeValidation) {
+    static_assert(regular_type<int>);
+    static_assert(regular_type<std::string>);
+    static_assert(regular_type<ComparableType>);
+    
+    ComparableType a;
+    ComparableType b = a;
+    ComparableType c = std::move(b);
+    a = c;
+    a = std::move(c);
+    
+    EXPECT_TRUE(a == a);
+    
+    SUCCEED();
+}
