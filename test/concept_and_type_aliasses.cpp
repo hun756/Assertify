@@ -747,3 +747,86 @@ TEST_F(EpsilonConfigTest, ULPConfigurationValidation)
                             .max_ulp_difference = 0};
     EXPECT_EQ(zero_ulp.max_ulp_difference, 0);
 }
+
+class IntegrationTest : public ConceptsAndAliasesTest
+{
+};
+
+TEST_F(IntegrationTest, ConceptsWithTypeAliases)
+{
+    std::pmr::monotonic_buffer_resource buffer(1024);
+    fast_allocator<int> alloc(&buffer);
+
+    fast_vector<int> vec(alloc);
+    fast_string<char> str(alloc);
+    fast_unordered_map<int> map(alloc);
+
+    static_assert(container_type<decltype(vec)>);
+    static_assert(sequence_container<decltype(vec)>);
+    static_assert(!associative_container<decltype(vec)>);
+
+    static_assert(container_type<decltype(map)>);
+    static_assert(!sequence_container<decltype(map)>);
+    static_assert(associative_container<decltype(map)>);
+
+    static_assert(string_like<decltype(str)>);
+    static_assert(streamable<decltype(str)>);
+
+    SUCCEED();
+}
+
+TEST_F(IntegrationTest, ConceptComposition)
+{
+
+    static_assert(streamable<std::string> && hashable<std::string>);
+
+    static_assert(container_type<std::vector<int>> &&
+                  equality_comparable<std::vector<int>>);
+
+    static_assert(numeric_type<double> && comparable<double>);
+
+    static_assert(container_type<fast_vector<ComparableType>> &&
+                  sequence_container<fast_vector<ComparableType>> &&
+                  !associative_container<fast_vector<ComparableType>>);
+
+    SUCCEED();
+}
+
+TEST_F(IntegrationTest, RealWorldUsagePattern)
+{
+    std::pmr::monotonic_buffer_resource buffer(2048);
+    fast_allocator<char> alloc(&buffer);
+
+    fast_vector<ComparableType> items(alloc);
+    fast_unordered_map<int> lookup(alloc);
+    fast_string<char> description("Real world test", alloc);
+
+    items.push_back(ComparableType{42});
+    items.push_back(ComparableType{17});
+    items.push_back(ComparableType{99});
+
+    lookup[42] = 100;
+    lookup[17] = 200;
+    lookup[99] = 300;
+
+    EXPECT_EQ(items.size(), 3);
+    EXPECT_EQ(lookup.size(), 3);
+    EXPECT_FALSE(description.empty());
+
+    static_assert(sequence_container<decltype(items)>);
+    static_assert(associative_container<decltype(lookup)>);
+    static_assert(string_like<decltype(description)>);
+    static_assert(comparable<ComparableType>);
+    static_assert(regular_type<ComparableType>);
+
+    std::sort(items.begin(), items.end());
+    EXPECT_EQ(items[0].value, 17);
+    EXPECT_EQ(items[1].value, 42);
+    EXPECT_EQ(items[2].value, 99);
+
+    auto it = lookup.find(42);
+    EXPECT_NE(it, lookup.end());
+    EXPECT_EQ(it->second, 100);
+
+    SUCCEED();
+}
