@@ -1,8 +1,10 @@
 #ifndef LIB_ASSERTIFY_HPP_p06vza
 #define LIB_ASSERTIFY_HPP_p06vza
 
+#include <bit>
 #include <chrono>
 #include <coroutine>
+#include <cstdint>
 #include <memory_resource>
 #include <shared_mutex>
 #include <source_location>
@@ -325,26 +327,56 @@ struct epsilon_config
     int max_ulp_difference = 4;
 };
 
+template <typename T>
+struct same_size_signed;
+template <>
+struct same_size_signed<float>
+{
+    using type = int32_t;
+};
+template <>
+struct same_size_signed<double>
+{
+    using type = int64_t;
+};
+#if defined(__SIZEOF_FLOAT128__)
+template <>
+struct same_size_signed<__float128>
+{
+    using type = __int128_t;
+};
+#endif
+
 template <std::floating_point T>
 constexpr bool almost_equal(T a, T b,
                             const epsilon_config& config = {}) noexcept
 {
+    if (std::isnan(a) || std::isnan(b))
+        return false;
+    if (std::isinf(a) || std::isinf(b))
+        return a == b;
+
     if (a == b)
         return true;
 
     if (config.use_ulp_comparison)
     {
-        const auto ulp_diff = std::abs(std::bit_cast<std::make_signed_t<T>>(a) -
-                                       std::bit_cast<std::make_signed_t<T>>(b));
+        using int_type = typename same_size_signed<T>::type;
+        const auto a_int = std::bit_cast<int_type>(a);
+        const auto b_int = std::bit_cast<int_type>(b);
+        const auto ulp_diff = std::abs(a_int - b_int);
         return ulp_diff <= config.max_ulp_difference;
     }
+    
+    const T abs_eps = static_cast<T>(config.absolute_epsilon);
+    const T rel_eps = static_cast<T>(config.relative_epsilon);
 
-    const T diff = std::abs(a - b);
-    if (diff <= config.absolute_epsilon)
+    const T diff = std::fabs(a - b);
+    if (diff <= abs_eps)
         return true;
 
-    const T largest = std::max(std::abs(a), std::abs(b));
-    return diff <= largest * config.relative_epsilon;
+    const T largest = std::fmax(std::fabs(a), std::fabs(b));
+    return diff <= largest * rel_eps;
 }
 
 template <complex_numeric T>
