@@ -1,17 +1,27 @@
 #ifndef LIB_ASSERTIFY_HPP_p06vza
 #define LIB_ASSERTIFY_HPP_p06vza
 
+#include <algorithm>
+#include <atomic>
 #include <bit>
 #include <chrono>
+#include <concepts>
 #include <coroutine>
 #include <cstdint>
+#include <format>
+#include <iostream>
 #include <memory_resource>
+#include <numeric>
+#include <ranges>
 #include <shared_mutex>
 #include <source_location>
 #include <stacktrace>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 #include <variant>
+#include <vector>
 
 namespace assertify
 {
@@ -367,7 +377,7 @@ constexpr bool almost_equal(T a, T b,
         const auto ulp_diff = std::abs(a_int - b_int);
         return ulp_diff <= config.max_ulp_difference;
     }
-    
+
     const T abs_eps = static_cast<T>(config.absolute_epsilon);
     const T rel_eps = static_cast<T>(config.relative_epsilon);
 
@@ -386,6 +396,90 @@ constexpr bool almost_equal(const T& a, const T& b,
     return almost_equal(a.real(), b.real(), config) &&
            almost_equal(a.imag(), b.imag(), config);
 }
+
+class statistical_analyzer
+{
+public:
+    template <std::ranges::range R>
+    static double mean(const R& data)
+    {
+        if (std::ranges::empty(data))
+            return 0.0;
+        return std::accumulate(std::ranges::begin(data), std::ranges::end(data),
+                               0.0) /
+               std::ranges::distance(data);
+    }
+
+    template <std::ranges::range R>
+    static double variance(const R& data)
+    {
+        if (std::ranges::distance(data) < 2)
+            return 0.0;
+        double m = mean(data);
+        double sum_sq_diff = 0.0;
+        for (const auto& val : data)
+        {
+            double diff = val - m;
+            sum_sq_diff += diff * diff;
+        }
+        return sum_sq_diff / (std::ranges::distance(data) - 1);
+    }
+
+    template <std::ranges::range R>
+    static double standard_deviation(const R& data)
+    {
+        return std::sqrt(variance(data));
+    }
+
+    template <std::ranges::range R>
+    static auto median(R data)
+    {
+        std::ranges::sort(data);
+        auto size = std::ranges::distance(data);
+        if (size % 2 == 0)
+        {
+            auto it1 = std::ranges::begin(data) + size / 2 - 1;
+            auto it2 = std::ranges::begin(data) + size / 2;
+            return (*it1 + *it2) / 2.0;
+        }
+        else
+        {
+            auto it = std::ranges::begin(data) + size / 2;
+            return static_cast<double>(*it);
+        }
+    }
+
+    template <std::ranges::range R1, std::ranges::range R2>
+    static double correlation(const R1& x, const R2& y)
+    {
+        if (std::ranges::distance(x) != std::ranges::distance(y) ||
+            std::ranges::empty(x))
+        {
+            return 0.0;
+        }
+
+        double mean_x = mean(x);
+        double mean_y = mean(y);
+        double numerator = 0.0;
+        double sum_sq_x = 0.0;
+        double sum_sq_y = 0.0;
+
+        auto it_x = std::ranges::begin(x);
+        auto it_y = std::ranges::begin(y);
+
+        for (; it_x != std::ranges::end(x); ++it_x, ++it_y)
+        {
+            double diff_x = *it_x - mean_x;
+            double diff_y = *it_y - mean_y;
+            numerator += diff_x * diff_y;
+            sum_sq_x += diff_x * diff_x;
+            sum_sq_y += diff_y * diff_y;
+        }
+
+        double denominator = std::sqrt(sum_sq_x * sum_sq_y);
+        return denominator != 0.0 ? numerator / denominator : 0.0;
+    }
+};
 
 } // namespace detail
 
