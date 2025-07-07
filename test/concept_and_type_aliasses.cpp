@@ -612,3 +612,46 @@ TEST_F(SerializationConceptsTest, DeserializableValidation)
 
     SUCCEED();
 }
+
+class NetworkCoroutineConceptsTest : public ConceptsAndAliasesTest
+{
+};
+
+TEST_F(NetworkCoroutineConceptsTest, NetworkTestableValidation)
+{
+    static_assert(network_testable<NetworkTestableType>);
+
+    static_assert(!network_testable<int>);
+    static_assert(!network_testable<std::string>);
+
+    NetworkTestableType response;
+    EXPECT_EQ(response.get_status_code(), 200);
+
+    auto headers = response.get_headers();
+    EXPECT_EQ(headers.size(), 2);
+    EXPECT_EQ(headers[0], "header1");
+
+    auto body = response.get_body();
+    EXPECT_EQ(body, "response body");
+
+    SUCCEED();
+}
+
+TEST_F(NetworkCoroutineConceptsTest, CoroutineLikeValidation)
+{
+    static_assert(coroutine_like<CoroutineLikeType>);
+
+    static_assert(!coroutine_like<int>);
+    static_assert(!coroutine_like<std::string>);
+
+    CoroutineLikeType awaitable;
+    EXPECT_TRUE(awaitable.await_ready());
+
+    std::coroutine_handle<> handle;
+    awaitable.await_suspend(handle);
+
+    auto result = awaitable.await_resume();
+    EXPECT_EQ(result, 42);
+
+    SUCCEED();
+}
