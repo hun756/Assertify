@@ -398,11 +398,11 @@ TEST_F(AssertionErrorTest, ThreadSafety)
         thread.join();
     }
 
-    for (int t = 0; t < num_threads; ++t)
+    for (size_t t = 0; t < num_threads; ++t)
     {
         EXPECT_EQ(results[static_cast<std::size_t>(t)].size(),
                   exceptions_per_thread);
-        for (int i = 0; i < exceptions_per_thread; ++i)
+        for (size_t i = 0; i < exceptions_per_thread; ++i)
         {
             const auto& error = results[t][i];
             std::string error_message = error.what();
