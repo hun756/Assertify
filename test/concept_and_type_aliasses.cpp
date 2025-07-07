@@ -655,3 +655,95 @@ TEST_F(NetworkCoroutineConceptsTest, CoroutineLikeValidation)
 
     SUCCEED();
 }
+
+class EpsilonConfigTest : public ConceptsAndAliasesTest
+{
+};
+
+TEST_F(EpsilonConfigTest, DefaultConstruction)
+{
+    epsilon_config config;
+
+    EXPECT_DOUBLE_EQ(config.relative_epsilon, 1e-9);
+    EXPECT_DOUBLE_EQ(config.absolute_epsilon, 1e-12);
+    EXPECT_FALSE(config.use_ulp_comparison);
+    EXPECT_EQ(config.max_ulp_difference, 4);
+}
+
+TEST_F(EpsilonConfigTest, CustomConstruction)
+{
+    epsilon_config config{.relative_epsilon = 1e-6,
+                          .absolute_epsilon = 1e-9,
+                          .use_ulp_comparison = true,
+                          .max_ulp_difference = 2};
+
+    EXPECT_DOUBLE_EQ(config.relative_epsilon, 1e-6);
+    EXPECT_DOUBLE_EQ(config.absolute_epsilon, 1e-9);
+    EXPECT_TRUE(config.use_ulp_comparison);
+    EXPECT_EQ(config.max_ulp_difference, 2);
+}
+
+TEST_F(EpsilonConfigTest, PartialConstruction)
+{
+    epsilon_config config1{.relative_epsilon = 1e-8};
+    EXPECT_DOUBLE_EQ(config1.relative_epsilon, 1e-8);
+    EXPECT_DOUBLE_EQ(config1.absolute_epsilon, 1e-12);
+
+    epsilon_config config2{.use_ulp_comparison = true};
+    EXPECT_TRUE(config2.use_ulp_comparison);
+    EXPECT_DOUBLE_EQ(config2.relative_epsilon, 1e-9);
+
+    epsilon_config config3{.max_ulp_difference = 10};
+    EXPECT_EQ(config3.max_ulp_difference, 10);
+    EXPECT_FALSE(config3.use_ulp_comparison);
+}
+
+TEST_F(EpsilonConfigTest, CopyAndAssignment)
+{
+    epsilon_config original{.relative_epsilon = 1e-7,
+                            .absolute_epsilon = 1e-10,
+                            .use_ulp_comparison = true,
+                            .max_ulp_difference = 8};
+
+    epsilon_config copied = original;
+    EXPECT_DOUBLE_EQ(copied.relative_epsilon, original.relative_epsilon);
+    EXPECT_DOUBLE_EQ(copied.absolute_epsilon, original.absolute_epsilon);
+    EXPECT_EQ(copied.use_ulp_comparison, original.use_ulp_comparison);
+    EXPECT_EQ(copied.max_ulp_difference, original.max_ulp_difference);
+
+    epsilon_config assigned;
+    assigned = original;
+    EXPECT_DOUBLE_EQ(assigned.relative_epsilon, original.relative_epsilon);
+    EXPECT_DOUBLE_EQ(assigned.absolute_epsilon, original.absolute_epsilon);
+    EXPECT_EQ(assigned.use_ulp_comparison, original.use_ulp_comparison);
+    EXPECT_EQ(assigned.max_ulp_difference, original.max_ulp_difference);
+}
+
+TEST_F(EpsilonConfigTest, EpsilonRangeValidation)
+{
+    epsilon_config small_epsilon{.relative_epsilon = 1e-15,
+                                 .absolute_epsilon = 1e-20};
+    EXPECT_GT(small_epsilon.relative_epsilon, 0.0);
+    EXPECT_GT(small_epsilon.absolute_epsilon, 0.0);
+
+    epsilon_config large_epsilon{.relative_epsilon = 1e-3,
+                                 .absolute_epsilon = 1e-6};
+    EXPECT_DOUBLE_EQ(large_epsilon.relative_epsilon, 1e-3);
+    EXPECT_DOUBLE_EQ(large_epsilon.absolute_epsilon, 1e-6);
+}
+
+TEST_F(EpsilonConfigTest, ULPConfigurationValidation)
+{
+    epsilon_config ulp_config{.use_ulp_comparison = true,
+                              .max_ulp_difference = 1};
+    EXPECT_TRUE(ulp_config.use_ulp_comparison);
+    EXPECT_EQ(ulp_config.max_ulp_difference, 1);
+
+    epsilon_config large_ulp{.use_ulp_comparison = true,
+                             .max_ulp_difference = 100};
+    EXPECT_EQ(large_ulp.max_ulp_difference, 100);
+
+    epsilon_config zero_ulp{.use_ulp_comparison = true,
+                            .max_ulp_difference = 0};
+    EXPECT_EQ(zero_ulp.max_ulp_difference, 0);
+}
