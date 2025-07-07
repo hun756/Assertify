@@ -1,3 +1,4 @@
+#include <assertify/assertify.hpp>
 #include <deque>
 #include <gtest/gtest.h>
 #include <random>
@@ -75,3 +76,85 @@ using ContainerTypes =
 } // namespace testing_utils
 
 using namespace testing_utils;
+using namespace assertify;
+using namespace assertify::detail;
+
+class MeanTest : public StatisticalAnalyzerTest
+{
+};
+
+TEST_F(MeanTest, BasicMeanCalculation)
+{
+    double result = statistical_analyzer::mean(small_data_);
+    EXPECT_DOUBLE_EQ(result, 3.0);
+}
+
+TEST_F(MeanTest, EmptyContainerMean)
+{
+    double result = statistical_analyzer::mean(empty_data_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(MeanTest, SingleElementMean)
+{
+    double result = statistical_analyzer::mean(single_element_);
+    EXPECT_DOUBLE_EQ(result, 42.0);
+}
+
+TEST_F(MeanTest, IdenticalElementsMean)
+{
+    double result = statistical_analyzer::mean(identical_elements_);
+    EXPECT_DOUBLE_EQ(result, 5.0);
+}
+
+TEST_F(MeanTest, IntegerDataMean)
+{
+    double result = statistical_analyzer::mean(integer_data_);
+    EXPECT_DOUBLE_EQ(result, 30.0);
+}
+
+TEST_F(MeanTest, MixedPositiveNegativeMean)
+{
+    double result = statistical_analyzer::mean(mixed_data_);
+    double expected = (-5.5 + 0.0 + 2.3 + 7.8 + 15.2) / 5.0;
+    EXPECT_DOUBLE_EQ(result, expected);
+}
+
+TEST_F(MeanTest, LargeDatasetMean)
+{
+    double result = statistical_analyzer::mean(large_data_);
+    double expected = 500.5;
+    EXPECT_DOUBLE_EQ(result, expected);
+}
+
+TEST_F(MeanTest, DifferentContainerTypes)
+{
+    std::list<double> list_data(small_data_.begin(), small_data_.end());
+    std::deque<double> deque_data(small_data_.begin(), small_data_.end());
+    std::array<double, 5> array_data = {1.0, 2.0, 3.0, 4.0, 5.0};
+
+    EXPECT_DOUBLE_EQ(statistical_analyzer::mean(list_data), 3.0);
+    EXPECT_DOUBLE_EQ(statistical_analyzer::mean(deque_data), 3.0);
+    EXPECT_DOUBLE_EQ(statistical_analyzer::mean(array_data), 3.0);
+}
+
+TEST_F(MeanTest, RangeViewsMean)
+{
+    auto even_numbers =
+        small_data_ |
+        std::views::filter([](double x)
+                           { return static_cast<int>(x) % 2 == 0; });
+    double result = statistical_analyzer::mean(even_numbers);
+    EXPECT_DOUBLE_EQ(result, 3.0);
+}
+
+TEST_F(MeanTest, ExtremeValues)
+{
+    std::vector<double> extreme_data = {std::numeric_limits<double>::max(),
+                                        std::numeric_limits<double>::lowest(),
+                                        0.0};
+
+    double result = statistical_analyzer::mean(extreme_data);
+    EXPECT_FALSE(std::isnan(result));
+    EXPECT_FALSE(std::isinf(result));
+}

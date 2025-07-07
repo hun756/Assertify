@@ -401,17 +401,17 @@ class statistical_analyzer
 {
 public:
     template <std::ranges::range R>
-    static double mean(const R& data)
+    static double mean(R&& data)
     {
         if (std::ranges::empty(data))
             return 0.0;
         return std::accumulate(std::ranges::begin(data), std::ranges::end(data),
                                0.0) /
-               std::ranges::distance(data);
+               static_cast<double>(std::ranges::distance(data));
     }
 
     template <std::ranges::range R>
-    static double variance(const R& data)
+    static double variance(R&& data)
     {
         if (std::ranges::distance(data) < 2)
             return 0.0;
@@ -426,7 +426,7 @@ public:
     }
 
     template <std::ranges::range R>
-    static double standard_deviation(const R& data)
+    static double standard_deviation(R&& data)
     {
         return std::sqrt(variance(data));
     }
