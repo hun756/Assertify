@@ -193,7 +193,7 @@ public:
     }
 };
 
-thread_local basic_memory_pool tl_pool;
+extern thread_local basic_memory_pool tl_pool;
 
 template <typename T>
 using fast_allocator = std::pmr::polymorphic_allocator<T>;
