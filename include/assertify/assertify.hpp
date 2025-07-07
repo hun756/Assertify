@@ -325,6 +325,36 @@ struct epsilon_config
     int max_ulp_difference = 4;
 };
 
+template <std::floating_point T>
+constexpr bool almost_equal(T a, T b,
+                            const epsilon_config& config = {}) noexcept
+{
+    if (a == b)
+        return true;
+
+    if (config.use_ulp_comparison)
+    {
+        const auto ulp_diff = std::abs(std::bit_cast<std::make_signed_t<T>>(a) -
+                                       std::bit_cast<std::make_signed_t<T>>(b));
+        return ulp_diff <= config.max_ulp_difference;
+    }
+
+    const T diff = std::abs(a - b);
+    if (diff <= config.absolute_epsilon)
+        return true;
+
+    const T largest = std::max(std::abs(a), std::abs(b));
+    return diff <= largest * config.relative_epsilon;
+}
+
+template <complex_numeric T>
+constexpr bool almost_equal(const T& a, const T& b,
+                            const epsilon_config& config = {}) noexcept
+{
+    return almost_equal(a.real(), b.real(), config) &&
+           almost_equal(a.imag(), b.imag(), config);
+}
+
 } // namespace detail
 
 } // namespace assertify
