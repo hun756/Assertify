@@ -701,3 +701,42 @@ TEST_F(FormatValueFunctionTest, NoexceptGuarantee)
     auto result = format_value(value);
     EXPECT_NO_THROW((void)result);
 }
+
+class MemoryManagementFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(MemoryManagementFormatterTest, ThreadLocalPoolUsage)
+{
+    std::string test_str = "memory test";
+    auto result = format_value(test_str);
+
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+    EXPECT_EQ(result, "\"memory test\"");
+}
+
+TEST_F(MemoryManagementFormatterTest, MemoryPoolResetBehavior)
+{
+
+    auto result1 = format_value(std::string("test1"));
+    auto result2 = format_value(std::vector<int>{1, 2, 3});
+
+    EXPECT_GT(tl_pool.active_allocation_count(), 0);
+
+    tl_pool.reset();
+    EXPECT_EQ(tl_pool.active_allocation_count(), 0);
+
+    auto result3 = format_value(std::string("test3"));
+    EXPECT_EQ(result3, "\"test3\"");
+}
+
+TEST_F(MemoryManagementFormatterTest, LargeDataFormatting)
+{
+
+    std::vector<int> large_vec(1000, 42);
+    auto result = format_value(large_vec);
+
+    EXPECT_TRUE(result.starts_with("["));
+    EXPECT_TRUE(result.ends_with("]"));
+    EXPECT_TRUE(result.find("...") != std::string::npos);
+}
