@@ -591,19 +591,21 @@ TEST_F(RangeViewsTest, FilteredRangeStatistics)
     EXPECT_FALSE(std::isnan(variance_result));
 }
 
+TEST_F(RangeViewsTest, TransformedRangeStatistics)
+{
+    auto doubled_values =
+        small_data_ | std::views::transform([](double x) { return x * 2; });
 
-TEST_F(RangeViewsTest, TransformedRangeStatistics) {
-    auto doubled_values = small_data_ | std::views::transform([](double x) { return x * 2; });
-    
     double mean_result = statistical_analyzer::mean(doubled_values);
     double original_mean = statistical_analyzer::mean(small_data_);
-    
+
     EXPECT_DOUBLE_EQ(mean_result, original_mean * 2.0);
 }
 
-TEST_F(RangeViewsTest, SubrangeStatistics) {
+TEST_F(RangeViewsTest, SubrangeStatistics)
+{
     auto subrange = small_data_ | std::views::take(3);
-    
+
     double mean_result = statistical_analyzer::mean(subrange);
     EXPECT_DOUBLE_EQ(mean_result, 2.0);
 }
