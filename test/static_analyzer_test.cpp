@@ -345,3 +345,108 @@ TEST_F(MedianTest, MedianDoesNotModifyInput)
     EXPECT_DOUBLE_EQ(result, 3.0);
     EXPECT_FALSE(std::is_sorted(copy.begin(), copy.end()));
 }
+
+class CorrelationTest : public StatisticalAnalyzerTest
+{
+};
+
+TEST_F(CorrelationTest, PerfectPositiveCorrelation)
+{
+    std::vector<double> x = {1.0, 2.0, 3.0, 4.0, 5.0};
+    std::vector<double> y = {2.0, 4.0, 6.0, 8.0, 10.0};
+
+    double result = statistical_analyzer::correlation(x, y);
+    EXPECT_NEAR(result, 1.0, 1e-9);
+}
+
+TEST_F(CorrelationTest, PerfectNegativeCorrelation)
+{
+    std::vector<double> x = {1.0, 2.0, 3.0, 4.0, 5.0};
+    std::vector<double> y = {5.0, 4.0, 3.0, 2.0, 1.0};
+
+    double result = statistical_analyzer::correlation(x, y);
+    EXPECT_NEAR(result, -1.0, 1e-9);
+}
+
+TEST_F(CorrelationTest, NoCorrelation)
+{
+    std::vector<double> x = {1.0, 2.0, 3.0, 4.0, 5.0};
+    std::vector<double> y = {5.0, 5.0, 5.0, 5.0, 5.0};
+
+    double result = statistical_analyzer::correlation(x, y);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(CorrelationTest, SelfCorrelation)
+{
+    double result = statistical_analyzer::correlation(small_data_, small_data_);
+    EXPECT_NEAR(result, 1.0, 1e-9);
+}
+
+TEST_F(CorrelationTest, EmptyContainersCorrelation)
+{
+    double result = statistical_analyzer::correlation(empty_data_, empty_data_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(CorrelationTest, DifferentSizeContainersCorrelation)
+{
+    std::vector<double> x = {1.0, 2.0, 3.0};
+    std::vector<double> y = {1.0, 2.0};
+
+    double result = statistical_analyzer::correlation(x, y);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(CorrelationTest, SingleElementCorrelation)
+{
+    double result =
+        statistical_analyzer::correlation(single_element_, single_element_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(CorrelationTest, IdenticalElementsCorrelation)
+{
+    double result = statistical_analyzer::correlation(identical_elements_,
+                                                      identical_elements_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(CorrelationTest, PartialCorrelation)
+{
+    std::vector<double> x = {1.0, 2.0, 3.0, 4.0, 5.0};
+    std::vector<double> y = {1.5, 2.1, 2.8, 4.2, 4.9};
+
+    double result = statistical_analyzer::correlation(x, y);
+    EXPECT_GT(result, 0.8);
+    EXPECT_LT(result, 1.0);
+}
+
+TEST_F(CorrelationTest, CorrelationProperties)
+{
+
+    double result =
+        statistical_analyzer::correlation(normal_data_, mixed_data_);
+    EXPECT_GE(result, -1.0);
+    EXPECT_LE(result, 1.0);
+    EXPECT_FALSE(std::isnan(result));
+}
+
+TEST_F(CorrelationTest, CorrelationSymmetry)
+{
+
+    double result1 =
+        statistical_analyzer::correlation(small_data_, mixed_data_);
+    double result2 =
+        statistical_analyzer::correlation(mixed_data_, small_data_);
+    EXPECT_DOUBLE_EQ(result1, result2);
+}
+
+TEST_F(CorrelationTest, DifferentContainerTypesCorrelation)
+{
+    std::list<double> x_list(small_data_.begin(), small_data_.end());
+    std::deque<double> y_deque(small_data_.begin(), small_data_.end());
+
+    double result = statistical_analyzer::correlation(x_list, y_deque);
+    EXPECT_NEAR(result, 1.0, 1e-9);
+}
