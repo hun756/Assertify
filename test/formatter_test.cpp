@@ -280,7 +280,8 @@ TEST_F(ArithmeticFormatterTest, SpecialCharacterFormatting)
 
     EXPECT_EQ(newline_result, "\n");
     EXPECT_EQ(tab_result, "\t");
-    EXPECT_EQ(null_result, fast_string<char>(std::string(1, '\0'), tl_pool.get_allocator<char>()));
+    EXPECT_EQ(null_result, fast_string<char>(std::string(1, '\0'),
+                                             tl_pool.get_allocator<char>()));
     EXPECT_EQ(space_result, " ");
 }
 
@@ -312,16 +313,17 @@ TEST_F(ArithmeticFormatterTest, WideCharacterFormatting)
     auto unicode_result = value_formatter<wchar_t>::format(unicode_wc);
     EXPECT_EQ(unicode_result, "U+03A9");
     EXPECT_TRUE(uses_thread_local_allocator(unicode_result));
-    
+
     wchar_t digit_wc = L'5';
     auto digit_result = value_formatter<wchar_t>::format(digit_wc);
     EXPECT_EQ(digit_result, "5");
     EXPECT_TRUE(uses_thread_local_allocator(digit_result));
-    
+
     wchar_t null_wc = L'\0';
     auto null_result = value_formatter<wchar_t>::format(null_wc);
-    EXPECT_EQ(null_result, fast_string<char>(std::string(1, '\0'), tl_pool.get_allocator<char>()));
-    
+    EXPECT_EQ(null_result, fast_string<char>(std::string(1, '\0'),
+                                             tl_pool.get_allocator<char>()));
+
     char regular_char = 'X';
     auto char_result = value_formatter<char>::format(regular_char);
     EXPECT_EQ(char_result, "X");
@@ -338,4 +340,101 @@ TEST_F(ArithmeticFormatterTest, BooleanFormatting)
 
     EXPECT_EQ(true_result, "true");
     EXPECT_EQ(false_result, "false");
+}
+
+class PointerFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(PointerFormatterTest, ValidPointerFormatting)
+{
+    int value = 42;
+    int* ptr = &value;
+    auto result = value_formatter<int*>::format(ptr);
+
+    EXPECT_TRUE(result.starts_with("0x"));
+    EXPECT_NE(result, "nullptr");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(PointerFormatterTest, NullPointerFormatting)
+{
+    int* null_ptr = nullptr;
+    auto result = value_formatter<int*>::format(null_ptr);
+
+    EXPECT_EQ(result, "nullptr");
+}
+
+TEST_F(PointerFormatterTest, VoidPointerFormatting)
+{
+    int value = 123;
+    void* void_ptr = &value;
+    auto result = value_formatter<void*>::format(void_ptr);
+
+    EXPECT_TRUE(result.starts_with("0x"));
+    EXPECT_NE(result, "nullptr");
+}
+
+TEST_F(PointerFormatterTest, ConstPointerFormatting)
+{
+    const int value = 456;
+    const int* const_ptr = &value;
+    auto result = value_formatter<const int*>::format(const_ptr);
+
+    EXPECT_TRUE(result.starts_with("0x"));
+}
+
+TEST_F(PointerFormatterTest, FunctionPointerFormatting)
+{
+    auto func_ptr = &std::strlen;
+    auto result = value_formatter<decltype(func_ptr)>::format(func_ptr);
+
+    EXPECT_TRUE(result.starts_with("0x"));
+}
+
+class OptionalFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(OptionalFormatterTest, OptionalWithValueFormatting)
+{
+    std::optional<int> opt = 42;
+    auto result = value_formatter<std::optional<int>>::format(opt);
+
+    EXPECT_EQ(result, "some(42)");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(OptionalFormatterTest, EmptyOptionalFormatting)
+{
+    std::optional<int> opt;
+    auto result = value_formatter<std::optional<int>>::format(opt);
+
+    EXPECT_EQ(result, "none");
+}
+
+TEST_F(OptionalFormatterTest, OptionalWithStringFormatting)
+{
+    std::optional<std::string> opt = "test string";
+    auto result = value_formatter<std::optional<std::string>>::format(opt);
+
+    EXPECT_EQ(result, "some(\"test string\")");
+}
+
+TEST_F(OptionalFormatterTest, OptionalWithComplexTypeFormatting)
+{
+    std::optional<std::complex<double>> opt = std::complex<double>(1.0, 2.0);
+    auto result =
+        value_formatter<std::optional<std::complex<double>>>::format(opt);
+
+    EXPECT_EQ(result, "some((1 + 2i))");
+}
+
+TEST_F(OptionalFormatterTest, NestedOptionalFormatting)
+{
+    std::optional<std::optional<int>> nested_opt = std::optional<int>(42);
+    auto result =
+        value_formatter<std::optional<std::optional<int>>>::format(nested_opt);
+
+    EXPECT_EQ(result, "some(some(42))");
 }

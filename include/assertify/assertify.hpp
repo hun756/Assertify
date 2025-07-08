@@ -646,7 +646,7 @@ public:
         {
             return value.has_value()
                        ? fast_string<char>(
-                             std::format("some({})", format(*value)),
+                             std::format("some({})", value_formatter<typename T::value_type>::format(*value)),
                              tl_pool.get_allocator<char>())
                        : fast_string<char>("none",
                                            tl_pool.get_allocator<char>());
@@ -667,7 +667,7 @@ public:
                 }
                 if (!first)
                     result += ", ";
-                result += format(item);
+                result += value_formatter<std::decay_t<decltype(item)>>::format(item);
                 first = false;
                 ++count;
             }
