@@ -547,3 +547,157 @@ TEST_F(ContainerFormatterTest, SpanFormatting)
 
     EXPECT_EQ(result, "[1, 2, 3, 4, 5]");
 }
+
+class VariantFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(VariantFormatterTest, VariantFormattingFirstType)
+{
+    std::variant<int, std::string> var = 42;
+    auto result = value_formatter<std::variant<int, std::string>>::format(var);
+
+    EXPECT_EQ(result, "variant<index:0>");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(VariantFormatterTest, VariantFormattingSecondType)
+{
+    std::variant<int, std::string> var = std::string("hello");
+    auto result = value_formatter<std::variant<int, std::string>>::format(var);
+
+    EXPECT_EQ(result, "variant<index:1>");
+}
+
+TEST_F(VariantFormatterTest, VariantFormattingComplexTypes)
+{
+    std::variant<int, double, std::string, std::vector<int>> var =
+        std::vector<int>{1, 2, 3};
+    auto result = value_formatter<
+        std::variant<int, double, std::string, std::vector<int>>>::format(var);
+
+    EXPECT_EQ(result, "variant<index:3>");
+}
+
+class EnumFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(EnumFormatterTest, ScopedEnumFormatting)
+{
+    TestEnum enum_val = TestEnum::VALUE3;
+    auto result = value_formatter<TestEnum>::format(enum_val);
+
+    EXPECT_EQ(result, "enum(42)");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(EnumFormatterTest, UnscopedEnumFormatting)
+{
+    TestEnumClass enum_val = TestEnumClass::C;
+    auto result = value_formatter<TestEnumClass>::format(enum_val);
+
+    EXPECT_EQ(result, "enum(255)");
+}
+
+TEST_F(EnumFormatterTest, EnumWithDifferentUnderlyingTypes)
+{
+    TestEnum enum1 = TestEnum::VALUE1;
+    TestEnumClass enum2 = TestEnumClass::A;
+
+    auto result1 = value_formatter<TestEnum>::format(enum1);
+    auto result2 = value_formatter<TestEnumClass>::format(enum2);
+
+    EXPECT_EQ(result1, "enum(10)");
+    EXPECT_EQ(result2, "enum(1)");
+}
+
+class StreamableFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(StreamableFormatterTest, CustomStreamableTypeFormatting)
+{
+    StreamableTestType obj{42};
+    auto result = value_formatter<StreamableTestType>::format(obj);
+
+    EXPECT_EQ(result, "StreamableTestType{42}");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(StreamableFormatterTest, StreamableTypeWithSpecialCharacters)
+{
+    StreamableTestType obj{-123};
+    auto result = value_formatter<StreamableTestType>::format(obj);
+
+    EXPECT_EQ(result, "StreamableTestType{-123}");
+}
+
+class NonStreamableFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(NonStreamableFormatterTest, NonStreamableTypeFormatting)
+{
+    NonStreamableType obj;
+    auto result = value_formatter<NonStreamableType>::format(obj);
+
+    EXPECT_TRUE(result.starts_with("object<"));
+    EXPECT_TRUE(result.ends_with(">"));
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(NonStreamableFormatterTest, TypeNameInclusion)
+{
+    NonStreamableType obj;
+    auto result = value_formatter<NonStreamableType>::format(obj);
+
+    EXPECT_GT(result.length(), 8);
+}
+
+class FormatValueFunctionTest : public ValueFormatterTest
+{
+};
+
+TEST_F(FormatValueFunctionTest, BasicFormatValueUsage)
+{
+    int value = 42;
+    auto result = format_value(value);
+
+    EXPECT_EQ(result, "42");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(FormatValueFunctionTest, FormatValueWithString)
+{
+    std::string str = "test";
+    auto result = format_value(str);
+
+    EXPECT_EQ(result, "\"test\"");
+}
+
+TEST_F(FormatValueFunctionTest, FormatValueWithContainer)
+{
+    std::vector<int> vec = {1, 2, 3};
+    auto result = format_value(vec);
+
+    EXPECT_EQ(result, "[1, 2, 3]");
+}
+
+TEST_F(FormatValueFunctionTest, FormatValueExceptionHandling)
+{
+    ThrowingStreamableType throwing_obj;
+    auto result = format_value(throwing_obj);
+
+    EXPECT_EQ(result, "unprintable");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(FormatValueFunctionTest, NoexceptGuarantee)
+{
+    static_assert(noexcept(format_value(std::declval<int>())));
+
+    int value = 123;
+    auto result = format_value(value);
+    EXPECT_NO_THROW((void)result);
+}
