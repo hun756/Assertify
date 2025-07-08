@@ -438,3 +438,112 @@ TEST_F(OptionalFormatterTest, NestedOptionalFormatting)
 
     EXPECT_EQ(result, "some(some(42))");
 }
+
+class ContainerFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(ContainerFormatterTest, VectorFormattingBasic)
+{
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+    auto result = value_formatter<std::vector<int>>::format(vec);
+
+    EXPECT_EQ(result, "[1, 2, 3, 4, 5]");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(ContainerFormatterTest, EmptyVectorFormatting)
+{
+    std::vector<int> empty_vec;
+    auto result = value_formatter<std::vector<int>>::format(empty_vec);
+
+    EXPECT_EQ(result, "[]");
+}
+
+TEST_F(ContainerFormatterTest, SingleElementVectorFormatting)
+{
+    std::vector<int> single_vec = {42};
+    auto result = value_formatter<std::vector<int>>::format(single_vec);
+
+    EXPECT_EQ(result, "[42]");
+}
+
+TEST_F(ContainerFormatterTest, LargeVectorFormattingTruncation)
+{
+    std::vector<int> large_vec;
+    for (int i = 1; i <= 15; ++i)
+    {
+        large_vec.push_back(i);
+    }
+
+    auto result = value_formatter<std::vector<int>>::format(large_vec);
+
+    EXPECT_TRUE(result.find("1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...") !=
+                std::string::npos);
+    EXPECT_TRUE(result.ends_with("]"));
+}
+
+TEST_F(ContainerFormatterTest, VectorOfStringsFormatting)
+{
+    std::vector<std::string> vec_str = {"hello", "world", "test"};
+    auto result = value_formatter<std::vector<std::string>>::format(vec_str);
+
+    EXPECT_EQ(result, "[\"hello\", \"world\", \"test\"]");
+}
+
+TEST_F(ContainerFormatterTest, ArrayFormattingStd)
+{
+    std::array<int, 4> arr = {10, 20, 30, 40};
+    auto result = value_formatter<std::array<int, 4>>::format(arr);
+
+    EXPECT_EQ(result, "[10, 20, 30, 40]");
+}
+
+TEST_F(ContainerFormatterTest, ListFormatting)
+{
+    std::list<double> lst = {1.1, 2.2, 3.3};
+    auto result = value_formatter<std::list<double>>::format(lst);
+
+    EXPECT_EQ(result, "[1.1, 2.2, 3.3]");
+}
+
+TEST_F(ContainerFormatterTest, FastVectorFormatting)
+{
+    fast_vector<int> fast_vec(tl_pool.get_allocator<int>());
+    fast_vec.push_back(100);
+    fast_vec.push_back(200);
+    fast_vec.push_back(300);
+
+    auto result = value_formatter<fast_vector<int>>::format(fast_vec);
+
+    EXPECT_EQ(result, "[100, 200, 300]");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(ContainerFormatterTest, NestedContainerFormatting)
+{
+    std::vector<std::vector<int>> nested = {{1, 2}, {3, 4}, {5, 6}};
+    auto result =
+        value_formatter<std::vector<std::vector<int>>>::format(nested);
+
+    EXPECT_EQ(result, "[[1, 2], [3, 4], [5, 6]]");
+}
+
+TEST_F(ContainerFormatterTest, ContainerOfComplexTypesFormatting)
+{
+    std::vector<std::complex<double>> complex_vec = {
+        {1.0, 2.0}, {3.0, -1.0}, {0.0, 5.0}};
+    auto result =
+        value_formatter<std::vector<std::complex<double>>>::format(complex_vec);
+
+    EXPECT_EQ(result, "[(1 + 2i), (3 + -1i), (0 + 5i)]");
+}
+
+TEST_F(ContainerFormatterTest, SpanFormatting)
+{
+    std::array<int, 5> arr = {1, 2, 3, 4, 5};
+    std::span<int> span_view(arr);
+    auto result = value_formatter<std::span<int>>::format(span_view);
+
+    EXPECT_EQ(result, "[1, 2, 3, 4, 5]");
+}
