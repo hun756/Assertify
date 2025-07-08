@@ -538,7 +538,32 @@ public:
 
         std::size_t max_len = std::max(s1.size(), s2.size());
         std::size_t edit_dist = edit_distance(s1, s2);
-        return 1.0 - static_cast<double>(edit_dist) / static_cast<double>(max_len);
+        return 1.0 -
+               static_cast<double>(edit_dist) / static_cast<double>(max_len);
+    }
+
+    static std::vector<std::string_view> tokenize(std::string_view str,
+                                                  char delimiter = ' ')
+    {
+        std::vector<std::string_view> tokens;
+        std::size_t start = 0;
+        std::size_t pos = 0;
+
+        while ((pos = str.find(delimiter, start)) != std::string_view::npos)
+        {
+            if (pos > start)
+            {
+                tokens.emplace_back(str.substr(start, pos - start));
+            }
+            start = pos + 1;
+        }
+
+        if (start < str.size())
+        {
+            tokens.emplace_back(str.substr(start));
+        }
+
+        return tokens;
     }
 };
 

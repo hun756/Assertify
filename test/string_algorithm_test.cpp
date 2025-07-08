@@ -74,7 +74,7 @@ class StringPairTest
 {
 };
 
-class TokenizationTest
+class ParamTokenizationTest
     : public StringAlgorithmsTest,
       public ::testing::WithParamInterface<
           std::tuple<std::string, char, std::vector<std::string>>>
@@ -365,4 +365,162 @@ TEST_F(FuzzyMatchRatioTest, Symmetry)
         EXPECT_DOUBLE_EQ(ratio1, ratio2) << "Ratio should be symmetric for '"
                                          << s1 << "' and '" << s2 << "'";
     }
+}
+
+class TokenizationTest : public StringAlgorithmsTest
+{
+};
+
+TEST_F(TokenizationTest, EmptyString)
+{
+    auto tokens = string_algorithms::tokenize("");
+    EXPECT_TRUE(tokens.empty());
+
+    auto tokens_comma = string_algorithms::tokenize("", ',');
+    EXPECT_TRUE(tokens_comma.empty());
+}
+
+TEST_F(TokenizationTest, SingleToken)
+{
+    auto tokens = string_algorithms::tokenize("hello");
+    ASSERT_EQ(tokens.size(), 1);
+    EXPECT_EQ(tokens[0], "hello");
+
+    auto tokens_comma = string_algorithms::tokenize("world", ',');
+    ASSERT_EQ(tokens_comma.size(), 1);
+    EXPECT_EQ(tokens_comma[0], "world");
+}
+
+TEST_F(TokenizationTest, MultipleTokensSpace)
+{
+    auto tokens = string_algorithms::tokenize("hello world test");
+    ASSERT_EQ(tokens.size(), 3);
+    EXPECT_EQ(tokens[0], "hello");
+    EXPECT_EQ(tokens[1], "world");
+    EXPECT_EQ(tokens[2], "test");
+}
+
+TEST_F(TokenizationTest, MultipleTokensComma)
+{
+    auto tokens = string_algorithms::tokenize("apple,banana,cherry", ',');
+    ASSERT_EQ(tokens.size(), 3);
+    EXPECT_EQ(tokens[0], "apple");
+    EXPECT_EQ(tokens[1], "banana");
+    EXPECT_EQ(tokens[2], "cherry");
+}
+
+TEST_F(TokenizationTest, LeadingTrailingDelimiters)
+{
+    auto tokens_leading = string_algorithms::tokenize(" hello world");
+    ASSERT_EQ(tokens_leading.size(), 2);
+    EXPECT_EQ(tokens_leading[0], "hello");
+    EXPECT_EQ(tokens_leading[1], "world");
+
+    auto tokens_trailing = string_algorithms::tokenize("hello world ");
+    ASSERT_EQ(tokens_trailing.size(), 2);
+    EXPECT_EQ(tokens_trailing[0], "hello");
+    EXPECT_EQ(tokens_trailing[1], "world");
+
+    auto tokens_both = string_algorithms::tokenize(" hello world ");
+    ASSERT_EQ(tokens_both.size(), 2);
+    EXPECT_EQ(tokens_both[0], "hello");
+    EXPECT_EQ(tokens_both[1], "world");
+}
+
+TEST_F(TokenizationTest, ConsecutiveDelimiters)
+{
+    auto tokens_spaces = string_algorithms::tokenize("hello  world   test");
+    ASSERT_EQ(tokens_spaces.size(), 3);
+    EXPECT_EQ(tokens_spaces[0], "hello");
+    EXPECT_EQ(tokens_spaces[1], "world");
+    EXPECT_EQ(tokens_spaces[2], "test");
+
+    auto tokens_commas = string_algorithms::tokenize("a,,b,,,c", ',');
+    ASSERT_EQ(tokens_commas.size(), 3);
+    EXPECT_EQ(tokens_commas[0], "a");
+    EXPECT_EQ(tokens_commas[1], "b");
+    EXPECT_EQ(tokens_commas[2], "c");
+}
+
+TEST_F(TokenizationTest, OnlyDelimiters)
+{
+    auto tokens_spaces = string_algorithms::tokenize("   ");
+    EXPECT_TRUE(tokens_spaces.empty());
+
+    auto tokens_commas = string_algorithms::tokenize(",,,", ',');
+    EXPECT_TRUE(tokens_commas.empty());
+}
+
+TEST_F(TokenizationTest, DifferentDelimiters)
+{
+    auto tokens_semicolon = string_algorithms::tokenize("a;b;c", ';');
+    ASSERT_EQ(tokens_semicolon.size(), 3);
+    EXPECT_EQ(tokens_semicolon[0], "a");
+    EXPECT_EQ(tokens_semicolon[1], "b");
+    EXPECT_EQ(tokens_semicolon[2], "c");
+
+    auto tokens_pipe = string_algorithms::tokenize("x|y|z", '|');
+    ASSERT_EQ(tokens_pipe.size(), 3);
+    EXPECT_EQ(tokens_pipe[0], "x");
+    EXPECT_EQ(tokens_pipe[1], "y");
+    EXPECT_EQ(tokens_pipe[2], "z");
+
+    auto tokens_tab = string_algorithms::tokenize("1\t2\t3", '\t');
+    ASSERT_EQ(tokens_tab.size(), 3);
+    EXPECT_EQ(tokens_tab[0], "1");
+    EXPECT_EQ(tokens_tab[1], "2");
+    EXPECT_EQ(tokens_tab[2], "3");
+}
+
+TEST_F(TokenizationTest, ComplexStrings)
+{
+    auto tokens = string_algorithms::tokenize("The quick brown fox jumps");
+    ASSERT_EQ(tokens.size(), 5);
+    EXPECT_EQ(tokens[0], "The");
+    EXPECT_EQ(tokens[1], "quick");
+    EXPECT_EQ(tokens[2], "brown");
+    EXPECT_EQ(tokens[3], "fox");
+    EXPECT_EQ(tokens[4], "jumps");
+
+    auto csv_tokens = string_algorithms::tokenize("name,age,city,country", ',');
+    ASSERT_EQ(csv_tokens.size(), 4);
+    EXPECT_EQ(csv_tokens[0], "name");
+    EXPECT_EQ(csv_tokens[1], "age");
+    EXPECT_EQ(csv_tokens[2], "city");
+    EXPECT_EQ(csv_tokens[3], "country");
+}
+
+TEST_F(TokenizationTest, UnicodeStrings)
+{
+    auto tokens = string_algorithms::tokenize("café München 北京");
+    ASSERT_EQ(tokens.size(), 3);
+    EXPECT_EQ(tokens[0], "café");
+    EXPECT_EQ(tokens[1], "München");
+    EXPECT_EQ(tokens[2], "北京");
+}
+
+TEST_F(TokenizationTest, SpecialCharactersInTokens)
+{
+    auto tokens = string_algorithms::tokenize("hello@world #test $money", ' ');
+    ASSERT_EQ(tokens.size(), 3);
+    EXPECT_EQ(tokens[0], "hello@world");
+    EXPECT_EQ(tokens[1], "#test");
+    EXPECT_EQ(tokens[2], "$money");
+}
+
+TEST_F(TokenizationTest, StringViewValidity)
+{
+
+    std::string source = "apple,banana,cherry";
+    auto tokens = string_algorithms::tokenize(source, ',');
+
+    ASSERT_EQ(tokens.size(), 3);
+
+    EXPECT_EQ(tokens[0].data(), source.data());
+    EXPECT_EQ(tokens[1].data(), source.data() + 6);
+    EXPECT_EQ(tokens[2].data(), source.data() + 13);
+
+    EXPECT_EQ(tokens[0].length(), 5);
+    EXPECT_EQ(tokens[1].length(), 6);
+    EXPECT_EQ(tokens[2].length(), 6);
 }
