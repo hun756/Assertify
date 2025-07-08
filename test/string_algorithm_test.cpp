@@ -253,3 +253,116 @@ TEST_F(HammingDistanceTest, SpecialCharacters)
     EXPECT_EQ(string_algorithms::hamming_distance("a!b", "a@b"), 1);
     EXPECT_EQ(string_algorithms::hamming_distance("()[]", "{}||"), 4);
 }
+
+class FuzzyMatchRatioTest : public StringAlgorithmsTest
+{
+};
+
+TEST_F(FuzzyMatchRatioTest, IdenticalStrings)
+{
+    EXPECT_DOUBLE_EQ(string_algorithms::fuzzy_match_ratio("", ""), 1.0);
+    EXPECT_DOUBLE_EQ(string_algorithms::fuzzy_match_ratio("a", "a"), 1.0);
+    EXPECT_DOUBLE_EQ(string_algorithms::fuzzy_match_ratio("hello", "hello"),
+                     1.0);
+    EXPECT_DOUBLE_EQ(
+        string_algorithms::fuzzy_match_ratio("identical", "identical"), 1.0);
+}
+
+TEST_F(FuzzyMatchRatioTest, EmptyStrings)
+{
+    EXPECT_DOUBLE_EQ(string_algorithms::fuzzy_match_ratio("", ""), 1.0);
+    EXPECT_DOUBLE_EQ(string_algorithms::fuzzy_match_ratio("", "a"), 0.0);
+    EXPECT_DOUBLE_EQ(string_algorithms::fuzzy_match_ratio("a", ""), 0.0);
+    EXPECT_DOUBLE_EQ(string_algorithms::fuzzy_match_ratio("", "hello"), 0.0);
+    EXPECT_DOUBLE_EQ(string_algorithms::fuzzy_match_ratio("world", ""), 0.0);
+}
+
+TEST_F(FuzzyMatchRatioTest, RatioCalculation)
+{
+
+    EXPECT_NEAR(string_algorithms::fuzzy_match_ratio("cat", "bat"), 2.0 / 3.0,
+                1e-10);
+
+    EXPECT_NEAR(string_algorithms::fuzzy_match_ratio("kitten", "sitting"),
+                4.0 / 7.0, 1e-10);
+
+    EXPECT_NEAR(string_algorithms::fuzzy_match_ratio("hello", "world"),
+                1.0 / 5.0, 1e-10);
+
+    EXPECT_NEAR(string_algorithms::fuzzy_match_ratio("MiXeD", "mixed"),
+                2.0 / 5.0, 1e-10);
+}
+
+TEST_F(FuzzyMatchRatioTest, CompletelyDifferentStrings)
+{
+
+    EXPECT_NEAR(string_algorithms::fuzzy_match_ratio("abc", "def"), 0.0, 1e-10);
+    EXPECT_NEAR(string_algorithms::fuzzy_match_ratio("12345", "abcde"), 0.0,
+                1e-10);
+}
+
+TEST_F(FuzzyMatchRatioTest, PartialMatches)
+{
+
+    auto ratio1 = string_algorithms::fuzzy_match_ratio("test", "best");
+    auto ratio2 = string_algorithms::fuzzy_match_ratio("test", "fest");
+    auto ratio3 = string_algorithms::fuzzy_match_ratio("test", "rest");
+
+    EXPECT_GT(ratio1, 0.5);
+    EXPECT_GT(ratio2, 0.5);
+    EXPECT_GT(ratio3, 0.5);
+
+    EXPECT_DOUBLE_EQ(ratio1, ratio2);
+    EXPECT_DOUBLE_EQ(ratio2, ratio3);
+}
+
+TEST_F(FuzzyMatchRatioTest, DifferentLengths)
+{
+
+    auto ratio1 = string_algorithms::fuzzy_match_ratio("a", "abc");
+    auto ratio2 = string_algorithms::fuzzy_match_ratio("abc", "a");
+
+    EXPECT_DOUBLE_EQ(ratio1, ratio2);
+    EXPECT_NEAR(ratio1, 1.0 / 3.0, 1e-10);
+}
+
+TEST_F(FuzzyMatchRatioTest, RangeValidation)
+{
+
+    std::vector<std::pair<std::string, std::string>> test_pairs = {
+        {"", "test"},
+        {"test", ""},
+        {"hello", "world"},
+        {"abc", "def"},
+        {"similar", "similiar"},
+        {"longer string", "short"},
+        {"123", "abc"}};
+
+    for (const auto& [s1, s2] : test_pairs)
+    {
+        double ratio = string_algorithms::fuzzy_match_ratio(s1, s2);
+        EXPECT_GE(ratio, 0.0)
+            << "Ratio should be >= 0 for '" << s1 << "' and '" << s2 << "'";
+        EXPECT_LE(ratio, 1.0)
+            << "Ratio should be <= 1 for '" << s1 << "' and '" << s2 << "'";
+    }
+}
+
+TEST_F(FuzzyMatchRatioTest, Symmetry)
+{
+
+    std::vector<std::pair<std::string, std::string>> test_pairs = {
+        {"hello", "world"},
+        {"kitten", "sitting"},
+        {"cat", "dog"},
+        {"short", "longer string"},
+        {"abc", "123"}};
+
+    for (const auto& [s1, s2] : test_pairs)
+    {
+        double ratio1 = string_algorithms::fuzzy_match_ratio(s1, s2);
+        double ratio2 = string_algorithms::fuzzy_match_ratio(s2, s1);
+        EXPECT_DOUBLE_EQ(ratio1, ratio2) << "Ratio should be symmetric for '"
+                                         << s1 << "' and '" << s2 << "'";
+    }
+}
