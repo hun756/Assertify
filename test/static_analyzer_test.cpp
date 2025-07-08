@@ -334,13 +334,14 @@ TEST_F(MedianTest, MedianWithDuplicates)
     EXPECT_DOUBLE_EQ(result, 3.0);
 }
 
-TEST_F(MedianTest, MedianModifiesInput)
+TEST_F(MedianTest, MedianDoesNotModifyInput)
 {
     std::vector<double> original = {5.0, 1.0, 3.0, 2.0, 4.0};
     std::vector<double> copy = original;
 
-    statistical_analyzer::median(copy);
+    double result = statistical_analyzer::median(copy);
 
-    EXPECT_TRUE(std::is_sorted(copy.begin(), copy.end()));
-    EXPECT_NE(original, copy);
+    EXPECT_EQ(original, copy);
+    EXPECT_DOUBLE_EQ(result, 3.0);
+    EXPECT_FALSE(std::is_sorted(copy.begin(), copy.end()));
 }
