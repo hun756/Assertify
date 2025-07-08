@@ -604,6 +604,30 @@ public:
                 return fast_string<char>(std::format("{:.6g}", value),
                                          tl_pool.get_allocator<char>());
             }
+            else if constexpr (std::is_same_v<T, char> ||
+                               std::is_same_v<T, signed char> ||
+                               std::is_same_v<T, unsigned char>)
+            {
+                return fast_string<char>(
+                    std::format("{}", static_cast<char>(value)),
+                    tl_pool.get_allocator<char>());
+            }
+            else if constexpr (std::is_same_v<T, wchar_t>)
+            {
+                if (value <= 127 && value >= 0)
+                {
+                    return fast_string<char>(
+                        std::format("{}", static_cast<char>(value)),
+                        tl_pool.get_allocator<char>());
+                }
+                else
+                {
+                    return fast_string<char>(
+                        std::format("U+{:04X}",
+                                    static_cast<unsigned int>(value)),
+                        tl_pool.get_allocator<char>());
+                }
+            }
             else
             {
                 return fast_string<char>(std::format("{}", value),

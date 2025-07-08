@@ -177,3 +177,165 @@ TEST_F(ComplexNumericFormatterTest, ComplexWithVerySmallNumbers)
     EXPECT_TRUE(result.find("-1e-15") != std::string::npos ||
                 result.find("-1e-015") != std::string::npos);
 }
+
+class ArithmeticFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(ArithmeticFormatterTest, IntegerFormatting)
+{
+    int value = 42;
+    auto result = value_formatter<int>::format(value);
+
+    EXPECT_EQ(result, "42");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(ArithmeticFormatterTest, NegativeIntegerFormatting)
+{
+    int value = -123;
+    auto result = value_formatter<int>::format(value);
+
+    EXPECT_EQ(result, "-123");
+}
+
+TEST_F(ArithmeticFormatterTest, LargeIntegerFormatting)
+{
+    long long value = 9223372036854775807LL;
+    auto result = value_formatter<long long>::format(value);
+
+    EXPECT_EQ(result, "9223372036854775807");
+}
+
+TEST_F(ArithmeticFormatterTest, UnsignedIntegerFormatting)
+{
+    unsigned int value = 4294967295U;
+    auto result = value_formatter<unsigned int>::format(value);
+
+    EXPECT_EQ(result, "4294967295");
+}
+
+TEST_F(ArithmeticFormatterTest, FloatingPointFormatting)
+{
+    double value = 3.14159265359;
+    auto result = value_formatter<double>::format(value);
+
+    EXPECT_EQ(result, "3.14159");
+}
+
+TEST_F(ArithmeticFormatterTest, ScientificNotationFormatting)
+{
+    double value = 1.23456789e15;
+    auto result = value_formatter<double>::format(value);
+
+    EXPECT_TRUE(result.find("1.23457e+15") != std::string::npos ||
+                result.find("1.23457e+015") != std::string::npos);
+}
+
+TEST_F(ArithmeticFormatterTest, VerySmallFloatingPoint)
+{
+    double value = 1.23456e-10;
+    auto result = value_formatter<double>::format(value);
+
+    EXPECT_TRUE(result.find("1.23456e-10") != std::string::npos ||
+                result.find("1.23456e-010") != std::string::npos);
+}
+
+TEST_F(ArithmeticFormatterTest, SpecialFloatingPointValues)
+{
+
+    double inf = std::numeric_limits<double>::infinity();
+    auto inf_result = value_formatter<double>::format(inf);
+    EXPECT_TRUE(inf_result.find("inf") != std::string::npos);
+
+    double neg_inf = -std::numeric_limits<double>::infinity();
+    auto neg_inf_result = value_formatter<double>::format(neg_inf);
+    EXPECT_TRUE(neg_inf_result.find("-inf") != std::string::npos);
+
+    double nan_val = std::numeric_limits<double>::quiet_NaN();
+    auto nan_result = value_formatter<double>::format(nan_val);
+    EXPECT_TRUE(nan_result.find("nan") != std::string::npos);
+}
+
+TEST_F(ArithmeticFormatterTest, CharacterFormatting)
+{
+    char c = 'A';
+    auto result = value_formatter<char>::format(c);
+
+    EXPECT_EQ(result, "A");
+}
+
+TEST_F(ArithmeticFormatterTest, SpecialCharacterFormatting)
+{
+
+    char newline = '\n';
+    char tab = '\t';
+    char null_char = '\0';
+    char space = ' ';
+
+    auto newline_result = value_formatter<char>::format(newline);
+    auto tab_result = value_formatter<char>::format(tab);
+    auto null_result = value_formatter<char>::format(null_char);
+    auto space_result = value_formatter<char>::format(space);
+
+    EXPECT_EQ(newline_result, "\n");
+    EXPECT_EQ(tab_result, "\t");
+    EXPECT_EQ(null_result, fast_string<char>(std::string(1, '\0'), tl_pool.get_allocator<char>()));
+    EXPECT_EQ(space_result, " ");
+}
+
+TEST_F(ArithmeticFormatterTest, CharacterVariantsFormatting)
+{
+
+    unsigned char uc = 'B';
+    signed char sc = 'C';
+
+    auto uc_result = value_formatter<unsigned char>::format(uc);
+    auto sc_result = value_formatter<signed char>::format(sc);
+
+    EXPECT_EQ(uc_result, "B");
+    EXPECT_EQ(sc_result, "C");
+
+    unsigned char numeric_uc = 65;
+    auto numeric_result = value_formatter<unsigned char>::format(numeric_uc);
+    EXPECT_EQ(numeric_result, "A");
+}
+
+TEST_F(ArithmeticFormatterTest, WideCharacterFormatting)
+{
+    wchar_t ascii_wc = L'X';
+    auto ascii_result = value_formatter<wchar_t>::format(ascii_wc);
+    EXPECT_EQ(ascii_result, "X");
+    EXPECT_TRUE(uses_thread_local_allocator(ascii_result));
+
+    wchar_t unicode_wc = L'Ω';
+    auto unicode_result = value_formatter<wchar_t>::format(unicode_wc);
+    EXPECT_EQ(unicode_result, "U+03A9");
+    EXPECT_TRUE(uses_thread_local_allocator(unicode_result));
+    
+    wchar_t digit_wc = L'5';
+    auto digit_result = value_formatter<wchar_t>::format(digit_wc);
+    EXPECT_EQ(digit_result, "5");
+    EXPECT_TRUE(uses_thread_local_allocator(digit_result));
+    
+    wchar_t null_wc = L'\0';
+    auto null_result = value_formatter<wchar_t>::format(null_wc);
+    EXPECT_EQ(null_result, fast_string<char>(std::string(1, '\0'), tl_pool.get_allocator<char>()));
+    
+    char regular_char = 'X';
+    auto char_result = value_formatter<char>::format(regular_char);
+    EXPECT_EQ(char_result, "X");
+    EXPECT_TRUE(uses_thread_local_allocator(char_result));
+}
+
+TEST_F(ArithmeticFormatterTest, BooleanFormatting)
+{
+    bool true_val = true;
+    bool false_val = false;
+
+    auto true_result = value_formatter<bool>::format(true_val);
+    auto false_result = value_formatter<bool>::format(false_val);
+
+    EXPECT_EQ(true_result, "true");
+    EXPECT_EQ(false_result, "false");
+}
