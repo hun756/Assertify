@@ -269,3 +269,78 @@ TEST_F(StandardDeviationTest, KnownDistributionStandardDeviation)
 
     EXPECT_NEAR(result, 1.0, 0.1);
 }
+
+class MedianTest : public StatisticalAnalyzerTest
+{
+};
+
+TEST_F(MedianTest, OddNumberElementsMedian)
+{
+    double result = statistical_analyzer::median(small_data_);
+    EXPECT_DOUBLE_EQ(result, 3.0);
+}
+
+TEST_F(MedianTest, EvenNumberElementsMedian)
+{
+    std::vector<double> even_data = {1.0, 2.0, 3.0, 4.0};
+    double result = statistical_analyzer::median(even_data);
+    EXPECT_DOUBLE_EQ(result, 2.5);
+}
+
+TEST_F(MedianTest, SingleElementMedian)
+{
+    double result = statistical_analyzer::median(single_element_);
+    EXPECT_DOUBLE_EQ(result, 42.0);
+}
+
+TEST_F(MedianTest, UnsortedDataMedian)
+{
+    std::vector<double> unsorted = {5.0, 1.0, 3.0, 2.0, 4.0};
+    double result = statistical_analyzer::median(unsorted);
+    EXPECT_DOUBLE_EQ(result, 3.0);
+}
+
+TEST_F(MedianTest, IdenticalElementsMedian)
+{
+    double result = statistical_analyzer::median(identical_elements_);
+    EXPECT_DOUBLE_EQ(result, 5.0);
+}
+
+TEST_F(MedianTest, IntegerDataMedian)
+{
+    auto int_copy = integer_data_;
+    double result = statistical_analyzer::median(int_copy);
+    EXPECT_DOUBLE_EQ(result, 30.0);
+}
+
+TEST_F(MedianTest, NegativeValuesMedian)
+{
+    std::vector<double> negative_data = {-5.0, -2.0, -1.0, 0.0, 1.0};
+    double result = statistical_analyzer::median(negative_data);
+    EXPECT_DOUBLE_EQ(result, -1.0);
+}
+
+TEST_F(MedianTest, LargeDatasetMedian)
+{
+    auto large_copy = large_data_;
+    double result = statistical_analyzer::median(large_copy);
+    EXPECT_DOUBLE_EQ(result, 500.5);
+}
+
+TEST_F(MedianTest, MedianWithDuplicates)
+{
+    std::vector<double> duplicate_data = {1.0, 2.0, 2.0, 3.0, 3.0, 3.0, 4.0};
+    double result = statistical_analyzer::median(duplicate_data);
+    EXPECT_DOUBLE_EQ(result, 3.0);
+}
+
+TEST_F(MedianTest, MedianModifiesInput)
+{
+    std::vector<double> original = {5.0, 1.0, 3.0, 2.0, 4.0};
+    std::vector<double> copy = original;
+
+    statistical_analyzer::median(copy);
+
+    EXPECT_TRUE(std::is_sorted(copy.begin(), copy.end()));
+    EXPECT_NE(original, copy);
+}
