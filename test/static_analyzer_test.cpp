@@ -450,3 +450,80 @@ TEST_F(CorrelationTest, DifferentContainerTypesCorrelation)
     double result = statistical_analyzer::correlation(x_list, y_deque);
     EXPECT_NEAR(result, 1.0, 1e-9);
 }
+
+class IntegrationTest : public StatisticalAnalyzerTest
+{
+};
+
+TEST_F(IntegrationTest, StatisticalConsistency)
+{
+    double mean_val = statistical_analyzer::mean(small_data_);
+    double variance_val = statistical_analyzer::variance(small_data_);
+    double stddev_val = statistical_analyzer::standard_deviation(small_data_);
+
+    EXPECT_NEAR(stddev_val, std::sqrt(variance_val), 1e-9);
+
+    EXPECT_DOUBLE_EQ(mean_val, 3.0);
+}
+
+TEST_F(IntegrationTest, AllStatisticsOnSameData)
+{
+    auto test_data = normal_data_;
+
+    double mean_val = statistical_analyzer::mean(test_data);
+    double variance_val = statistical_analyzer::variance(test_data);
+    double stddev_val = statistical_analyzer::standard_deviation(test_data);
+    auto median_copy = test_data;
+    double median_val = statistical_analyzer::median(median_copy);
+    double self_corr = statistical_analyzer::correlation(test_data, test_data);
+
+    EXPECT_FALSE(std::isnan(mean_val));
+    EXPECT_FALSE(std::isnan(variance_val));
+    EXPECT_FALSE(std::isnan(stddev_val));
+    EXPECT_FALSE(std::isnan(median_val));
+    EXPECT_FALSE(std::isnan(self_corr));
+
+    EXPECT_GE(variance_val, 0.0);
+    EXPECT_GE(stddev_val, 0.0);
+    EXPECT_NEAR(self_corr, 1.0, 1e-9);
+}
+
+TEST_F(IntegrationTest, NormalDistributionProperties)
+{
+    auto large_normal = generate_normal_distribution(10000, 100.0, 15.0);
+
+    double mean_val = statistical_analyzer::mean(large_normal);
+    double stddev_val = statistical_analyzer::standard_deviation(large_normal);
+    auto median_copy = large_normal;
+    double median_val = statistical_analyzer::median(median_copy);
+
+    EXPECT_NEAR(mean_val, 100.0, 2.0);
+    EXPECT_NEAR(stddev_val, 15.0, 2.0);
+    EXPECT_NEAR(median_val, mean_val, 3.0);
+}
+
+TEST_F(IntegrationTest, TransformedDataProperties)
+{
+    std::vector<double> original = {1.0, 2.0, 3.0, 4.0, 5.0};
+    std::vector<double> scaled;
+    std::vector<double> shifted;
+
+    for (double x : original)
+    {
+        scaled.push_back(2.0 * x + 3.0);
+        shifted.push_back(x + 10.0);
+    }
+
+    double orig_mean = statistical_analyzer::mean(original);
+    double scaled_mean = statistical_analyzer::mean(scaled);
+    double shifted_mean = statistical_analyzer::mean(shifted);
+
+    double orig_stddev = statistical_analyzer::standard_deviation(original);
+    double scaled_stddev = statistical_analyzer::standard_deviation(scaled);
+    double shifted_stddev = statistical_analyzer::standard_deviation(shifted);
+
+    EXPECT_NEAR(scaled_mean, 2.0 * orig_mean + 3.0, 1e-9);
+    EXPECT_NEAR(shifted_mean, orig_mean + 10.0, 1e-9);
+    EXPECT_NEAR(scaled_stddev, 2.0 * orig_stddev, 1e-9);
+    EXPECT_NEAR(shifted_stddev, orig_stddev, 1e-9);
+}
