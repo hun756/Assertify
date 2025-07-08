@@ -158,3 +158,59 @@ TEST_F(MeanTest, ExtremeValues)
     EXPECT_FALSE(std::isnan(result));
     EXPECT_FALSE(std::isinf(result));
 }
+
+class VarianceTest : public StatisticalAnalyzerTest
+{
+};
+
+TEST_F(VarianceTest, BasicVarianceCalculation)
+{
+    double result = statistical_analyzer::variance(small_data_);
+    EXPECT_DOUBLE_EQ(result, 2.5);
+}
+
+TEST_F(VarianceTest, EmptyContainerVariance)
+{
+    double result = statistical_analyzer::variance(empty_data_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(VarianceTest, SingleElementVariance)
+{
+    double result = statistical_analyzer::variance(single_element_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(VarianceTest, IdenticalElementsVariance)
+{
+    double result = statistical_analyzer::variance(identical_elements_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(VarianceTest, TwoElementsVariance)
+{
+    std::vector<double> two_elements = {1.0, 3.0};
+    double result = statistical_analyzer::variance(two_elements);
+    EXPECT_DOUBLE_EQ(result, 2.0);
+}
+
+TEST_F(VarianceTest, IntegerDataVariance)
+{
+    double result = statistical_analyzer::variance(integer_data_);
+    EXPECT_DOUBLE_EQ(result, 250.0);
+}
+
+TEST_F(VarianceTest, MixedDataVariance)
+{
+    double result = statistical_analyzer::variance(mixed_data_);
+    EXPECT_GT(result, 0.0);
+    EXPECT_FALSE(std::isnan(result));
+}
+
+TEST_F(VarianceTest, VarianceProperties)
+{
+    double result = statistical_analyzer::variance(normal_data_);
+    EXPECT_GE(result, 0.0);
+    EXPECT_FALSE(std::isnan(result));
+    EXPECT_FALSE(std::isinf(result));
+}
