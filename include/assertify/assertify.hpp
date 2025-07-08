@@ -203,6 +203,19 @@ public:
         }
         return leaks;
     }
+
+    template <typename T = std::byte>
+    [[nodiscard]] std::pmr::polymorphic_allocator<T> get_allocator() noexcept
+    {
+        if constexpr (std::is_same_v<T, std::byte>)
+        {
+            return allocator_;
+        }
+        else
+        {
+            return std::pmr::polymorphic_allocator<T>(&buffer_);
+        }
+    }
 };
 
 extern thread_local basic_memory_pool tl_pool;
@@ -566,6 +579,117 @@ public:
         return tokens;
     }
 };
+
+template <typename T>
+class value_formatter
+{
+public:
+    static fast_string<char> format(const T& value)
+    {
+        if constexpr (string_like<T>)
+        {
+            return fast_string<char>(std::format("\"{}\"", value),
+                                     tl_pool.get_allocator<char>());
+        }
+        else if constexpr (complex_numeric<T>)
+        {
+            return fast_string<char>(
+                std::format("({} + {}i)", value.real(), value.imag()),
+                tl_pool.get_allocator<char>());
+        }
+        else if constexpr (std::is_arithmetic_v<T>)
+        {
+            if constexpr (std::is_floating_point_v<T>)
+            {
+                return fast_string<char>(std::format("{:.6g}", value),
+                                         tl_pool.get_allocator<char>());
+            }
+            else
+            {
+                return fast_string<char>(std::format("{}", value),
+                                         tl_pool.get_allocator<char>());
+            }
+        }
+        else if constexpr (std::is_pointer_v<T>)
+        {
+            return fast_string<char>(
+                value
+                    ? std::format("0x{:x}", reinterpret_cast<uintptr_t>(value))
+                    : "nullptr",
+                tl_pool.get_allocator<char>());
+        }
+        else if constexpr (optional_like<T>)
+        {
+            return value.has_value()
+                       ? fast_string<char>(
+                             std::format("some({})", format(*value)),
+                             tl_pool.get_allocator<char>())
+                       : fast_string<char>("none",
+                                           tl_pool.get_allocator<char>());
+        }
+        else if constexpr (container_type<T>)
+        {
+            fast_string<char> result("[", tl_pool.get_allocator<char>());
+            bool first = true;
+            std::size_t count = 0;
+            constexpr std::size_t max_display = 10;
+
+            for (const auto& item : value)
+            {
+                if (count >= max_display)
+                {
+                    result += ", ...";
+                    break;
+                }
+                if (!first)
+                    result += ", ";
+                result += format(item);
+                first = false;
+                ++count;
+            }
+            result += "]";
+            return result;
+        }
+        else if constexpr (variant_like<T>)
+        {
+            return fast_string<char>(
+                std::format("variant<index:{}>", value.index()),
+                tl_pool.get_allocator<char>());
+        }
+        else if constexpr (std::is_enum_v<T>)
+        {
+            return fast_string<char>(
+                std::format("enum({})",
+                            static_cast<std::underlying_type_t<T>>(value)),
+                tl_pool.get_allocator<char>());
+        }
+        else if constexpr (streamable<T>)
+        {
+            std::ostringstream oss;
+            oss << value;
+            return fast_string<char>(oss.str(), tl_pool.get_allocator<char>());
+        }
+        else
+        {
+            return fast_string<char>(
+                std::format("object<{}>", typeid(T).name()),
+                tl_pool.get_allocator<char>());
+        }
+    }
+};
+
+template <typename T>
+[[nodiscard]] inline fast_string<char> format_value(const T& value) noexcept
+{
+    try
+    {
+        return value_formatter<T>::format(value);
+    }
+    catch (...)
+    {
+        return fast_string<char>("unprintable", tl_pool.get_allocator<char>());
+    }
+}
 
 } // namespace detail
 
