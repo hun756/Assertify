@@ -422,7 +422,8 @@ public:
             double diff = val - m;
             sum_sq_diff += diff * diff;
         }
-        return sum_sq_diff / static_cast<double>(std::ranges::distance(data) - 1);
+        return sum_sq_diff /
+               static_cast<double>(std::ranges::distance(data) - 1);
     }
 
     template <std::ranges::range R>
@@ -478,6 +479,39 @@ public:
 
         double denominator = std::sqrt(sum_sq_x * sum_sq_y);
         return denominator != 0.0 ? numerator / denominator : 0.0;
+    }
+};
+
+class string_algorithms
+{
+public:
+    static std::size_t edit_distance(std::string_view s1, std::string_view s2)
+    {
+        std::vector<std::vector<std::size_t>> dp(
+            s1.size() + 1, std::vector<std::size_t>(s2.size() + 1));
+
+        for (std::size_t i = 0; i <= s1.size(); ++i)
+            dp[i][0] = i;
+        for (std::size_t j = 0; j <= s2.size(); ++j)
+            dp[0][j] = j;
+
+        for (std::size_t i = 1; i <= s1.size(); ++i)
+        {
+            for (std::size_t j = 1; j <= s2.size(); ++j)
+            {
+                if (s1[i - 1] == s2[j - 1])
+                {
+                    dp[i][j] = dp[i - 1][j - 1];
+                }
+                else
+                {
+                    dp[i][j] = 1 + std::min({dp[i - 1][j], dp[i][j - 1],
+                                             dp[i - 1][j - 1]});
+                }
+            }
+        }
+
+        return dp[s1.size()][s2.size()];
     }
 };
 
