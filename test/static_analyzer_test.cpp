@@ -573,3 +573,37 @@ REGISTER_TYPED_TEST_SUITE_P(StatisticalAnalyzerContainerTest,
 INSTANTIATE_TYPED_TEST_SUITE_P(ContainerTests, StatisticalAnalyzerContainerTest,
                                ContainerTypes);
 
+class RangeViewsTest : public StatisticalAnalyzerTest
+{
+};
+
+TEST_F(RangeViewsTest, FilteredRangeStatistics)
+{
+    auto positive_numbers =
+        mixed_data_ | std::views::filter([](double x) { return x > 0; });
+
+    double mean_result = statistical_analyzer::mean(positive_numbers);
+    double variance_result = statistical_analyzer::variance(positive_numbers);
+
+    EXPECT_GT(mean_result, 0.0);
+    EXPECT_GE(variance_result, 0.0);
+    EXPECT_FALSE(std::isnan(mean_result));
+    EXPECT_FALSE(std::isnan(variance_result));
+}
+
+
+TEST_F(RangeViewsTest, TransformedRangeStatistics) {
+    auto doubled_values = small_data_ | std::views::transform([](double x) { return x * 2; });
+    
+    double mean_result = statistical_analyzer::mean(doubled_values);
+    double original_mean = statistical_analyzer::mean(small_data_);
+    
+    EXPECT_DOUBLE_EQ(mean_result, original_mean * 2.0);
+}
+
+TEST_F(RangeViewsTest, SubrangeStatistics) {
+    auto subrange = small_data_ | std::views::take(3);
+    
+    double mean_result = statistical_analyzer::mean(subrange);
+    EXPECT_DOUBLE_EQ(mean_result, 2.0);
+}
