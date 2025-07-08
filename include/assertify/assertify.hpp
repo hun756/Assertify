@@ -422,7 +422,7 @@ public:
             double diff = val - m;
             sum_sq_diff += diff * diff;
         }
-        return sum_sq_diff / (std::ranges::distance(data) - 1);
+        return sum_sq_diff / static_cast<double>(std::ranges::distance(data) - 1);
     }
 
     template <std::ranges::range R>
