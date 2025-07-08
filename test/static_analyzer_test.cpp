@@ -214,3 +214,58 @@ TEST_F(VarianceTest, VarianceProperties)
     EXPECT_FALSE(std::isnan(result));
     EXPECT_FALSE(std::isinf(result));
 }
+
+class StandardDeviationTest : public StatisticalAnalyzerTest
+{
+};
+
+TEST_F(StandardDeviationTest, BasicStandardDeviationCalculation)
+{
+    double result = statistical_analyzer::standard_deviation(small_data_);
+    double expected_variance = 2.5;
+    double expected_stddev = std::sqrt(expected_variance);
+    EXPECT_DOUBLE_EQ(result, expected_stddev);
+}
+
+TEST_F(StandardDeviationTest, EmptyContainerStandardDeviation)
+{
+    double result = statistical_analyzer::standard_deviation(empty_data_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(StandardDeviationTest, SingleElementStandardDeviation)
+{
+    double result = statistical_analyzer::standard_deviation(single_element_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(StandardDeviationTest, IdenticalElementsStandardDeviation)
+{
+    double result =
+        statistical_analyzer::standard_deviation(identical_elements_);
+    EXPECT_DOUBLE_EQ(result, 0.0);
+}
+
+TEST_F(StandardDeviationTest, StandardDeviationVarianceConsistency)
+{
+    double variance = statistical_analyzer::variance(small_data_);
+    double stddev = statistical_analyzer::standard_deviation(small_data_);
+    EXPECT_DOUBLE_EQ(stddev * stddev, variance);
+}
+
+TEST_F(StandardDeviationTest, StandardDeviationProperties)
+{
+    double result = statistical_analyzer::standard_deviation(normal_data_);
+    EXPECT_GE(result, 0.0);
+    EXPECT_FALSE(std::isnan(result));
+    EXPECT_FALSE(std::isinf(result));
+}
+
+TEST_F(StandardDeviationTest, KnownDistributionStandardDeviation)
+{
+    std::vector<double> precise_normal =
+        generate_normal_distribution(10000, 0.0, 1.0);
+    double result = statistical_analyzer::standard_deviation(precise_normal);
+
+    EXPECT_NEAR(result, 1.0, 0.1);
+}
