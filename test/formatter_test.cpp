@@ -1,7 +1,10 @@
 #include <assertify/assertify.hpp>
+#include <complex>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <regex>
+#include <string>
+#include <string_view>
 
 using namespace assertify;
 using namespace detail;
@@ -125,4 +128,52 @@ TEST_F(StringLikeFormatterTest, FastStringFormatting)
 
     EXPECT_EQ(result, "\"fast string test\"");
     EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+class ComplexNumericFormatterTest : public ValueFormatterTest
+{
+};
+
+TEST_F(ComplexNumericFormatterTest, ComplexDoubleFormatting)
+{
+    std::complex<double> c(3.14159, 2.71828);
+    auto result = value_formatter<std::complex<double>>::format(c);
+
+    EXPECT_EQ(result, "(3.14159 + 2.71828i)");
+    EXPECT_TRUE(uses_thread_local_allocator(result));
+}
+
+TEST_F(ComplexNumericFormatterTest, ComplexFloatFormatting)
+{
+    std::complex<float> c(1.0f, -2.5f);
+    auto result = value_formatter<std::complex<float>>::format(c);
+
+    EXPECT_EQ(result, "(1 + -2.5i)");
+}
+
+TEST_F(ComplexNumericFormatterTest, ComplexWithZeroImaginary)
+{
+    std::complex<double> c(42.0, 0.0);
+    auto result = value_formatter<std::complex<double>>::format(c);
+
+    EXPECT_EQ(result, "(42 + 0i)");
+}
+
+TEST_F(ComplexNumericFormatterTest, ComplexWithZeroReal)
+{
+    std::complex<double> c(0.0, 5.0);
+    auto result = value_formatter<std::complex<double>>::format(c);
+
+    EXPECT_EQ(result, "(0 + 5i)");
+}
+
+TEST_F(ComplexNumericFormatterTest, ComplexWithVerySmallNumbers)
+{
+    std::complex<double> c(1e-10, -1e-15);
+    auto result = value_formatter<std::complex<double>>::format(c);
+
+    EXPECT_TRUE(result.find("1e-10") != std::string::npos ||
+                result.find("1e-010") != std::string::npos);
+    EXPECT_TRUE(result.find("-1e-15") != std::string::npos ||
+                result.find("-1e-015") != std::string::npos);
 }
