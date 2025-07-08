@@ -527,3 +527,49 @@ TEST_F(IntegrationTest, TransformedDataProperties)
     EXPECT_NEAR(scaled_stddev, 2.0 * orig_stddev, 1e-9);
     EXPECT_NEAR(shifted_stddev, orig_stddev, 1e-9);
 }
+
+TYPED_TEST_SUITE_P(StatisticalAnalyzerContainerTest);
+
+TYPED_TEST_P(StatisticalAnalyzerContainerTest, MeanWithDifferentContainers)
+{
+    using Container = typename TestFixture::container_type;
+
+    if constexpr (std::is_same_v<Container, std::array<double, 5>>)
+    {
+        Container data = {1.0, 2.0, 3.0, 4.0, 5.0};
+        double result = statistical_analyzer::mean(data);
+        EXPECT_DOUBLE_EQ(result, 3.0);
+    }
+    else
+    {
+        Container data(this->small_data_.begin(), this->small_data_.end());
+        double result = statistical_analyzer::mean(data);
+        EXPECT_DOUBLE_EQ(result, 3.0);
+    }
+}
+
+TYPED_TEST_P(StatisticalAnalyzerContainerTest, VarianceWithDifferentContainers)
+{
+    using Container = typename TestFixture::container_type;
+
+    if constexpr (std::is_same_v<Container, std::array<double, 5>>)
+    {
+        Container data = {1.0, 2.0, 3.0, 4.0, 5.0};
+        double result = statistical_analyzer::variance(data);
+        EXPECT_DOUBLE_EQ(result, 2.5);
+    }
+    else
+    {
+        Container data(this->small_data_.begin(), this->small_data_.end());
+        double result = statistical_analyzer::variance(data);
+        EXPECT_DOUBLE_EQ(result, 2.5);
+    }
+}
+
+REGISTER_TYPED_TEST_SUITE_P(StatisticalAnalyzerContainerTest,
+                            MeanWithDifferentContainers,
+                            VarianceWithDifferentContainers);
+
+INSTANTIATE_TYPED_TEST_SUITE_P(ContainerTests, StatisticalAnalyzerContainerTest,
+                               ContainerTypes);
+
