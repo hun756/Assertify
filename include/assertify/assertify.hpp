@@ -513,6 +513,21 @@ public:
 
         return dp[s1.size()][s2.size()];
     }
+
+    static std::size_t hamming_distance(std::string_view s1,
+                                        std::string_view s2)
+    {
+        if (s1.size() != s2.size())
+            return std::numeric_limits<std::size_t>::max();
+
+        std::size_t distance = 0;
+        for (std::size_t i = 0; i < s1.size(); ++i)
+        {
+            if (s1[i] != s2[i])
+                ++distance;
+        }
+        return distance;
+    }
 };
 
 } // namespace detail
