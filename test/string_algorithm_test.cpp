@@ -184,3 +184,72 @@ TEST_F(EditDistanceTest, Whitespace)
     EXPECT_EQ(string_algorithms::edit_distance("no spaces", "nospaces"), 1);
     EXPECT_EQ(string_algorithms::edit_distance("  trim  ", "trim"), 4);
 }
+
+class HammingDistanceTest : public StringAlgorithmsTest
+{
+};
+
+TEST_F(HammingDistanceTest, IdenticalStrings)
+{
+    EXPECT_EQ(string_algorithms::hamming_distance("", ""), 0);
+    EXPECT_EQ(string_algorithms::hamming_distance("a", "a"), 0);
+    EXPECT_EQ(string_algorithms::hamming_distance("hello", "hello"), 0);
+    EXPECT_EQ(string_algorithms::hamming_distance("identical", "identical"), 0);
+}
+
+TEST_F(HammingDistanceTest, UnequalLengths)
+{
+
+    EXPECT_EQ(string_algorithms::hamming_distance("a", "ab"),
+              std::numeric_limits<std::size_t>::max());
+    EXPECT_EQ(string_algorithms::hamming_distance("short", "longer"),
+              std::numeric_limits<std::size_t>::max());
+    EXPECT_EQ(string_algorithms::hamming_distance("", "a"),
+              std::numeric_limits<std::size_t>::max());
+    EXPECT_EQ(string_algorithms::hamming_distance("hello", "hi"),
+              std::numeric_limits<std::size_t>::max());
+}
+
+TEST_F(HammingDistanceTest, SingleDifferences)
+{
+    EXPECT_EQ(string_algorithms::hamming_distance("a", "b"), 1);
+    EXPECT_EQ(string_algorithms::hamming_distance("cat", "bat"), 1);
+    EXPECT_EQ(string_algorithms::hamming_distance("hello", "hallo"), 1);
+    EXPECT_EQ(string_algorithms::hamming_distance("world", "worle"), 1);
+}
+
+TEST_F(HammingDistanceTest, MultipleDifferences)
+{
+    EXPECT_EQ(string_algorithms::hamming_distance("abc", "def"), 3);
+    EXPECT_EQ(string_algorithms::hamming_distance("hello", "world"), 4);
+    EXPECT_EQ(string_algorithms::hamming_distance("12345", "54321"), 4);
+    EXPECT_EQ(string_algorithms::hamming_distance("aaaaa", "bbbbb"), 5);
+}
+
+TEST_F(HammingDistanceTest, BinaryStrings)
+{
+    EXPECT_EQ(string_algorithms::hamming_distance("1011101", "1001001"), 2);
+    EXPECT_EQ(string_algorithms::hamming_distance("0000", "1111"), 4);
+    EXPECT_EQ(string_algorithms::hamming_distance("101010", "010101"), 6);
+}
+
+TEST_F(HammingDistanceTest, NumericStrings)
+{
+    EXPECT_EQ(string_algorithms::hamming_distance("123", "124"), 1);
+    EXPECT_EQ(string_algorithms::hamming_distance("999", "000"), 3);
+    EXPECT_EQ(string_algorithms::hamming_distance("12345", "67890"), 5);
+}
+
+TEST_F(HammingDistanceTest, CaseSensitive)
+{
+    EXPECT_EQ(string_algorithms::hamming_distance("Hello", "hello"), 1);
+    EXPECT_EQ(string_algorithms::hamming_distance("WORLD", "world"), 5);
+    EXPECT_EQ(string_algorithms::hamming_distance("MiXeD", "mIxEd"), 5);
+}
+
+TEST_F(HammingDistanceTest, SpecialCharacters)
+{
+    EXPECT_EQ(string_algorithms::hamming_distance("!@#", "$%^"), 3);
+    EXPECT_EQ(string_algorithms::hamming_distance("a!b", "a@b"), 1);
+    EXPECT_EQ(string_algorithms::hamming_distance("()[]", "{}||"), 4);
+}
