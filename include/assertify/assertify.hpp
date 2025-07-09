@@ -646,7 +646,10 @@ public:
         {
             return value.has_value()
                        ? fast_string<char>(
-                             std::format("some({})", value_formatter<typename T::value_type>::format(*value)),
+                             std::format(
+                                 "some({})",
+                                 value_formatter<
+                                     typename T::value_type>::format(*value)),
                              tl_pool.get_allocator<char>())
                        : fast_string<char>("none",
                                            tl_pool.get_allocator<char>());
@@ -667,7 +670,8 @@ public:
                 }
                 if (!first)
                     result += ", ";
-                result += value_formatter<std::decay_t<decltype(item)>>::format(item);
+                result +=
+                    value_formatter<std::decay_t<decltype(item)>>::format(item);
                 first = false;
                 ++count;
             }
@@ -714,6 +718,130 @@ template <typename T>
         return fast_string<char>("unprintable", tl_pool.get_allocator<char>());
     }
 }
+
+class concurrent_performance_counter
+{
+private:
+    mutable std::atomic<std::uint64_t> assertion_count_{0};
+    mutable std::atomic<std::uint64_t> total_time_ns_{0};
+    mutable std::atomic<std::uint64_t> min_time_ns_{
+        std::numeric_limits<std::uint64_t>::max()};
+    mutable std::atomic<std::uint64_t> max_time_ns_{0};
+    mutable std::shared_mutex mutex_;
+    mutable std::vector<std::uint64_t> recent_times_;
+
+public:
+    class scoped_timer
+    {
+        const concurrent_performance_counter& counter_;
+        std::chrono::high_resolution_clock::time_point start_;
+
+    public:
+        explicit scoped_timer(const concurrent_performance_counter& counter)
+            : counter_(counter),
+              start_(std::chrono::high_resolution_clock::now())
+        {
+        }
+
+        ~scoped_timer()
+        {
+            auto end = std::chrono::high_resolution_clock::now();
+            auto duration =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(end -
+                                                                     start_);
+            auto time_ns = static_cast<std::uint64_t>(duration.count());
+
+            counter_.total_time_ns_.fetch_add(time_ns,
+                                              std::memory_order_relaxed);
+            counter_.assertion_count_.fetch_add(1, std::memory_order_relaxed);
+
+            std::uint64_t current_min =
+                counter_.min_time_ns_.load(std::memory_order_relaxed);
+            while (time_ns < current_min &&
+                   !counter_.min_time_ns_.compare_exchange_weak(
+                       current_min, time_ns, std::memory_order_relaxed))
+                ;
+
+            std::uint64_t current_max =
+                counter_.max_time_ns_.load(std::memory_order_relaxed);
+            while (time_ns > current_max &&
+                   !counter_.max_time_ns_.compare_exchange_weak(
+                       current_max, time_ns, std::memory_order_relaxed))
+                ;
+
+            {
+                std::unique_lock lock(counter_.mutex_);
+                counter_.recent_times_.push_back(time_ns);
+                if (counter_.recent_times_.size() > 1000)
+                {
+                    counter_.recent_times_.erase(
+                        counter_.recent_times_.begin(),
+                        counter_.recent_times_.begin() + 500);
+                }
+            }
+        }
+    };
+
+    [[nodiscard]] scoped_timer time() const { return scoped_timer(*this); }
+
+    [[nodiscard]] std::uint64_t count() const noexcept
+    {
+        return assertion_count_.load(std::memory_order_relaxed);
+    }
+
+    [[nodiscard]] std::uint64_t total_time_ns() const noexcept
+    {
+        return total_time_ns_.load(std::memory_order_relaxed);
+    }
+
+    [[nodiscard]] std::uint64_t min_time_ns() const noexcept
+    {
+        auto min_val = min_time_ns_.load(std::memory_order_relaxed);
+        return min_val == std::numeric_limits<std::uint64_t>::max() ? 0
+                                                                    : min_val;
+    }
+
+    [[nodiscard]] std::uint64_t max_time_ns() const noexcept
+    {
+        return max_time_ns_.load(std::memory_order_relaxed);
+    }
+
+    [[nodiscard]] double average_time_ns() const noexcept
+    {
+        auto cnt = count();
+        return cnt > 0 ? static_cast<double>(total_time_ns()) /
+                             static_cast<double>(cnt)
+                       : 0.0;
+    }
+
+    [[nodiscard]] std::uint64_t percentile(double p) const
+    {
+        std::shared_lock lock(mutex_);
+        if (recent_times_.empty())
+            return 0;
+
+        auto sorted_times = recent_times_;
+        std::ranges::sort(sorted_times);
+
+        std::size_t index = static_cast<std::size_t>(
+            p / 100.0 * (static_cast<double>(sorted_times.size()) - 1.0));
+        return sorted_times[index];
+    }
+
+    void reset() noexcept
+    {
+        assertion_count_.store(0, std::memory_order_relaxed);
+        total_time_ns_.store(0, std::memory_order_relaxed);
+        min_time_ns_.store(std::numeric_limits<std::uint64_t>::max(),
+                           std::memory_order_relaxed);
+        max_time_ns_.store(0, std::memory_order_relaxed);
+
+        std::unique_lock lock(mutex_);
+        recent_times_.clear();
+    }
+};
+
+inline concurrent_performance_counter global_perf_counter;
 
 } // namespace detail
 
